@@ -5,7 +5,7 @@ Small, self-hosted plugins for [Glance](https://github.com/glanceapp/glance).
 | Plugin | What it does |
 | ------ | ------------ |
 | [Enhanced Search](plugins/search-enhanced/) | Open URLs directly from the search bar and show live Google suggestions. |
-| [Theme Switcher](plugins/theme-switcher/) | Follow the OS light/dark preference using Glance theme presets, with an optional manual override. |
+| [Theme Switcher](plugins/theme-switcher/) | Follow the OS light/dark preference using a colorscheme file from `assets/themes/`. |
 
 ## `plugin-manager.js` is the entry point
 
@@ -42,7 +42,7 @@ document:
     <script src="/assets/plugin-manager.js"></script>
 ```
 
-The plugin manager injects the palette CSS declared by the plugin entry, so there is no `theme.custom-css-file` in `glance.yml`.
+The plugin manager loads `themes/<colorscheme>.css` automatically, so there is no `theme.custom-css-file` in `glance.yml`.
 
 The manager path is relative to itself, so this also works under a `base-url`.
 
@@ -55,12 +55,8 @@ This is where every plugin's config lives. Comments and trailing commas are allo
   "plugins": [
     {
       "name": "theme-switcher",
-      "styles": ["themes/kissa.css"],
       "config": {
-        "lightPreset": "kissa-latte",
-        "darkPreset": "kissa-macchiato",
-        "autoPreset": "kissa-auto",
-        "storageKey": "kissa-theme-mode"
+        "colorscheme": "kissa"
       }
     },
     {
@@ -86,7 +82,7 @@ This is where every plugin's config lives. Comments and trailing commas are allo
 
 Plugins are loaded in array order. If `path` is omitted, the manager uses `plugin-lock.json` and then falls back to `.plugins/<name>/<name>.js`.
 
-`styles` entries in `plugins.jsonc` are resolved relative to the assets directory. In remote specs they resolve relative to the plugin script. Recommended layout for user palettes: `assets/themes/<name>.css`.
+When `config.colorscheme` is set, the manager automatically loads `themes/<colorscheme>.css` relative to the assets directory. An explicit `styles` array overrides that. Recommended layout for user palettes: `assets/themes/<name>.css`.
 
 ## `plugin-lock.json`
 
@@ -121,8 +117,9 @@ No manager required:
 ```yaml
 document:
   head: |
+    <link rel="stylesheet" href="/assets/themes/kissa.css">
     <script src="/assets/theme-switcher.js"
-      data-config='{"lightPreset":"kissa-latte","darkPreset":"kissa-macchiato"}'></script>
+      data-config='{"colorscheme":"kissa"}'></script>
     <script src="/assets/search-enhanced.js" defer
       data-config='{"suggestions":true}'></script>
 ```

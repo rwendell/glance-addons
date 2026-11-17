@@ -1,31 +1,26 @@
 /*
  * Glance Theme Switcher
  *
- * Follows prefers-color-scheme and applies a light/dark marker to <html>.
- * Pair it with a custom CSS file that maps that marker to your theme
- * variables. Also tracks explicit selections from Glance's theme picker.
+ * Applies the OS light/dark preference to <html data-glance-scheme>. The
+ * plugin manager loads themes/<colorscheme>.css automatically.
  *
- * Standalone:
+ * Config:
+ *   { "colorscheme": "kissa" }
  *
- *   <script src="/assets/theme-switcher.js"
- *     data-config='{"lightPreset":"kissa-latte","darkPreset":"kissa-macchiato"}'></script>
+ * Theme file requirement: it must define BOTH variants:
  *
- * With the plugin loader:
+ *   html[data-glance-scheme="dark"]  { ... }
+ *   html[data-glance-scheme="light"] { ... }
  *
- *   GlancePlugins.setup({
- *     plugins: [{
- *       repo: "rwendell/glance-plugins",
- *       name: "theme-switcher",
- *       config: { lightPreset: "kissa-latte", darkPreset: "kissa-macchiato" }
- *     }]
- *   });
- *
- * The plugin sets <html data-glance-scheme="light|dark">.
+ * A file that only defines one variant is reported as an error.
  */
 (function () {
     "use strict";
 
     const NAME = "theme-switcher";
+    const ATTRIBUTE = "data-glance-scheme";
+    const LIGHT_SELECTOR = /data-glance-scheme\s*=\s*["']light["']/;
+    const DARK_SELECTOR = /data-glance-scheme\s*=\s*["']dark["']/;
     let initialized = false;
 
     function readInlineConfig() {
@@ -43,6 +38,73 @@
         }
     }
 
+    function findThemeStylesheet(colorscheme) {
+        const suffix = `/themes/${colorscheme}.css`;
+
+        return Array.from(document.styleSheets).find((sheet) => {
+            const href = sheet.href || "";
+            return href.endsWith(suffix) || href.includes(suffix + "?");
+        });
+    }
+
+    function stylesheetHasBothVariants(sheet) {
+        let light = false;
+        let dark = false;
+
+        function visit(rules) {
+            for (const rule of rules) {
+                const text = rule.cssText || "";
+
+                if (!light && LIGHT_SELECTOR.test(text)) {
+                    light = true;
+                }
+
+                if (!dark && DARK_SELECTOR.test(text)) {
+                    dark = true;
+                }
+
+                if (rule.cssRules) {
+                    visit(rule.cssRules);
+                }
+            }
+        }
+
+        visit(sheet.cssRules);
+
+        return light && dark;
+    }
+
+    function validateTheme(colorscheme) {
+        const sheet = findThemeStylesheet(colorscheme);
+
+        if (!sheet) {
+            console.warn(
+                `[${NAME}] Could not find themes/${colorscheme}.css. ` +
+                    "Load it with the plugin manager or a stylesheet."
+            );
+            return;
+        }
+
+        let valid = false;
+
+        try {
+            valid = stylesheetHasBothVariants(sheet);
+        } catch (error) {
+            console.warn(
+                `[${NAME}] Could not inspect themes/${colorscheme}.css`,
+                error
+            );
+            return;
+        }
+
+        if (!valid) {
+            console.error(
+                `[${NAME}] themes/${colorscheme}.css must define both ` +
+                    `html[${ATTRIBUTE}="light"] and html[${ATTRIBUTE}="dark"].`
+            );
+        }
+    }
+
     function setup(userConfig) {
         if (initialized) {
             return;
@@ -50,143 +112,42 @@
 
         initialized = true;
 
-        const config = Object.assign(
-            {
-                lightPreset: "glance-light",
-                darkPreset: "glance-dark",
-                autoPreset: "glance-auto",
-                storageKey: "glance-theme-mode",
-                defaultMode: "auto",
-                attribute: "data-glance-scheme",
-            },
-            userConfig || {}
-        );
+        const config = userConfig || {};
+        const colorscheme =
+            typeof config.colorscheme === "string"
+                ? config.colorscheme.trim()
+                : "";
+
+        if (!colorscheme) {
+            console.error(`[${NAME}] Missing required config: colorscheme`);
+            return;
+        }
+
+        if (!/^[a-z0-9][a-z0-9_-]*$/i.test(colorscheme)) {
+            console.error(`[${NAME}] Invalid colorscheme name: ${colorscheme}`);
+            return;
+        }
 
         const root = document.documentElement;
         const media = window.matchMedia("(prefers-color-scheme: light)");
-        const modes = ["auto", "light", "dark", "off"];
 
-        function readStoredMode() {
-            try {
-                return localStorage.getItem(config.storageKey);
-            } catch {
-                return null;
-            }
+        root.dataset.glanceColorscheme = colorscheme;
+
+        function apply(isLight) {
+            root.setAttribute(ATTRIBUTE, isLight ? "light" : "dark");
         }
 
-        function storeMode(value) {
-            try {
-                localStorage.setItem(config.storageKey, value);
-            } catch {
-                // localStorage can be unavailable in private browsing modes.
-            }
-        }
+        apply(media.matches);
 
-        const managedPresets = [
-            config.lightPreset,
-            config.darkPreset,
-            config.autoPreset,
-        ].filter(Boolean);
-
-        const currentTheme = root.dataset.theme || "default";
-        const currentThemeIsManaged =
-            currentTheme === "default" || managedPresets.includes(currentTheme);
-
-        const storedMode = readStoredMode();
-        const firstVisitMode = modes.includes(config.defaultMode)
-            ? config.defaultMode
-            : "auto";
-        let mode = modes.includes(storedMode)
-            ? storedMode
-            : currentThemeIsManaged
-              ? firstVisitMode
-              : "off";
-
-        function applyScheme(isLight) {
-            root.setAttribute(config.attribute, isLight ? "light" : "dark");
-        }
-
-        function clearScheme() {
-            root.removeAttribute(config.attribute);
-        }
-
-        function applyCurrentMode() {
-            if (mode === "off") {
-                clearScheme();
-                return;
-            }
-
-            applyScheme(mode === "light" || (mode === "auto" && media.matches));
-        }
-
-        function setMode(nextMode) {
-            if (!modes.includes(nextMode)) {
-                return;
-            }
-
-            mode = nextMode;
-            storeMode(mode);
-            applyCurrentMode();
-        }
-
-        applyCurrentMode();
-
-        media.addEventListener("change", () => {
-            if (mode === "auto") {
-                applyScheme(media.matches);
-            }
+        media.addEventListener("change", (event) => {
+            apply(event.matches);
         });
 
-        // Glance's theme picker updates data-theme/data-scheme after its
-        // request finishes. Re-assert the selected scheme if that races with
-        // this plugin.
-        new MutationObserver(() => {
-            if (mode !== "off") {
-                applyCurrentMode();
-            }
-        }).observe(root, {
-            attributes: true,
-            attributeFilter: ["data-theme", "data-scheme"],
-        });
-
-        // Capture phase so this runs before Glance's own picker handler. We do
-        // not stop propagation: Glance should still update its current-theme
-        // preview and persist the preset cookie.
-        document.addEventListener(
-            "click",
-            (event) => {
-                const preset = event.target.closest(".theme-preset");
-
-                if (!preset || !preset.dataset.key) {
-                    return;
-                }
-
-                const key = preset.dataset.key;
-
-                if (config.autoPreset && key === config.autoPreset) {
-                    setMode("auto");
-                    return;
-                }
-
-                if (key === config.lightPreset) {
-                    setMode("light");
-                    return;
-                }
-
-                if (key === config.darkPreset) {
-                    setMode("dark");
-                    return;
-                }
-
-                setMode("off");
-            },
-            true
-        );
+        requestAnimationFrame(() => validateTheme(colorscheme));
 
         window.GlanceThemeSwitcher = {
-            setMode,
-            getMode: () => mode,
-            refresh: applyCurrentMode,
+            colorscheme,
+            refresh: () => apply(media.matches),
         };
     }
 

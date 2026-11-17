@@ -2,11 +2,17 @@
  * Kissa for Glance
  * https://github.com/rwendell/kissa
  *
- * Save as assets/themes/kissa.css and set:
+ * Save as assets/themes/kissa.css.
+ *
+ * With plugin-manager.js, this file is loaded automatically when the
+ * theme-switcher entry in plugins.jsonc uses {"colorscheme": "kissa"}.
+ *
+ * Standalone, set:
  *   theme:
  *     custom-css-file: /assets/themes/kissa.css
  *
- * The theme switcher plugin sets data-glance-scheme on <html>.
+ * The theme switcher plugin sets data-glance-scheme on <html>. Both the light
+ * and dark blocks below are required.
  */
 
 /* Before the plugin manager finishes loading, follow the OS preference so

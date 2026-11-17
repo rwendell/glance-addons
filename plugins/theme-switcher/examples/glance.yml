@@ -1,10 +1,10 @@
-# Complete example: Glance + Kissa + Theme Switcher + Enhanced Search.
-# Copy theme-switcher.js, search-enhanced.js, and kissa.css into ./assets/.
+# Standalone example: Glance + Kissa + Theme Switcher + Enhanced Search.
+# Copy theme-switcher.js and search-enhanced.js into ./assets/, and
+# kissa.css into ./assets/themes/kissa.css.
 #
-# This is the standalone setup. With plugin-manager.js, remove
-# theme.custom-css-file and declare the palette under the theme-switcher
-# entry in plugins.jsonc instead:
-#   "styles": ["themes/kissa.css"]
+# With plugin-manager.js, remove custom-css-file and the direct script tags;
+# use plugins.jsonc instead:
+#   {"name": "theme-switcher", "config": {"colorscheme": "kissa"}}
 
 server:
   assets-path: assets
@@ -12,14 +12,12 @@ server:
 document:
   head: |
     <script src="/assets/theme-switcher.js"
-      data-config='{"lightPreset":"kissa-latte","darkPreset":"kissa-macchiato","autoPreset":"kissa-auto","storageKey":"kissa-theme-mode"}'></script>
+      data-config='{"colorscheme":"kissa"}'></script>
     <script src="/assets/search-enhanced.js" defer
       data-config='{"directUrls":true,"suggestions":true,"maxSuggestions":8}'></script>
 
 theme:
-  # Remove this line if you want the theme picker visible.
-  # disable-picker: true
-
+  disable-picker: true
   custom-css-file: /assets/themes/kissa.css
 
   # Kissa Macchiato is the server-rendered fallback.
@@ -29,32 +27,6 @@ theme:
   primary-color: 211 50 66
   positive-color: 97 34 58
   negative-color: 0 71 69
-
-  presets:
-    kissa-macchiato:
-      background-color: 40 17 10
-      contrast-multiplier: 1.15
-      text-saturation-multiplier: 1.6
-      primary-color: 211 50 66
-      positive-color: 97 34 58
-      negative-color: 0 71 69
-
-    kissa-latte:
-      light: true
-      background-color: 48 20 95
-      contrast-multiplier: 1
-      text-saturation-multiplier: 1.6
-      primary-color: 213 53 43
-      positive-color: 146 33 33
-      negative-color: 0 44 43
-
-    kissa-auto:
-      background-color: 40 17 10
-      contrast-multiplier: 1.15
-      text-saturation-multiplier: 1.6
-      primary-color: 211 50 66
-      positive-color: 97 34 58
-      negative-color: 0 71 69
 
 pages:
   - name: Home

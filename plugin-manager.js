@@ -24,8 +24,8 @@
  *
  *   GlancePlugins.setup({
  *     plugins: [
- *       {"repo": "rwendell/glance-plugins", "name": "theme-switcher",
- *        "config": {"lightPreset": "kissa-latte"}}
+ *       {"repo": "rwendell/glance-plugins", "name": "search-enhanced",
+ *        "config": {"suggestions": true}}
  *     ]
  *   });
  *
@@ -348,6 +348,16 @@
         );
     }
 
+    function versionedUrl(url, version) {
+        if (!version) {
+            return url;
+        }
+
+        const parsed = new URL(url, document.baseURI);
+        parsed.searchParams.set("v", version);
+        return parsed.href;
+    }
+
     function localSpecs(config, lock, base) {
         const entries = Array.isArray(config.plugins) ? config.plugins : [];
         const lockedPlugins = (lock && lock.plugins) || {};
@@ -362,21 +372,37 @@
             const lockEntry = lockedPlugins[name] || {};
             const localPath =
                 entry.path || lockEntry.path || `.plugins/${name}/${name}.js`;
+            const config = entry.config || {};
+            const colorscheme =
+                typeof config.colorscheme === "string"
+                    ? config.colorscheme.trim()
+                    : "";
+
+            if (colorscheme && !/^[a-z0-9][a-z0-9_-]*$/i.test(colorscheme)) {
+                throw new Error(`Invalid colorscheme name: ${colorscheme}`);
+            }
+
             const fallback =
                 lockEntry.repo && lockEntry.entry
                     ? `https://cdn.jsdelivr.net/gh/${lockEntry.repo}@${
                           lockEntry.ref || DEFAULT_REF
                       }/${lockEntry.entry}`
                     : null;
+            const configuredStyles =
+                entry.styles ??
+                lockEntry.styles ??
+                (colorscheme ? [`themes/${colorscheme}.css`] : []);
+            const localUrl = new URL(localPath, base).href;
+            const version = lockEntry.ref || lockEntry.version || "";
 
             return {
                 name,
-                url: entry.url || new URL(localPath, base).href,
+                url: entry.url || versionedUrl(localUrl, version),
                 fallback,
-                styles: (entry.styles || lockEntry.styles || []).map((style) =>
+                styles: configuredStyles.map((style) =>
                     new URL(style, base).href
                 ),
-                config: entry.config || {},
+                config,
                 enabled: entry.enabled !== false,
             };
         });
