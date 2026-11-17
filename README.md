@@ -124,7 +124,7 @@ document:
     </script>
 ```
 
-The loader reads [`glance-plugins.json`](glance-plugins.json) to resolve `name` to an entry file. If a repo has no manifest, it falls back to `{name}/{name}.js`.
+The loader reads [`glance-plugins.json`](glance-plugins.json) to resolve `name` to an entry file. If a repo has no manifest, it falls back to `{name}/{name}.js`. See [`loader/README.md`](loader/README.md) for all spec fields and the plugin contract.
 
 You can also put the loader config directly on its script tag:
 

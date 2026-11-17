@@ -283,47 +283,56 @@
         },
 
         async load(rawSpec) {
-            const spec = normalizeSpec(rawSpec);
+            const wasLoading = this._loading;
+            this._loading = true;
 
-            if (spec.enabled === false) {
-                return;
-            }
+            try {
+                const spec = normalizeSpec(rawSpec);
 
-            const entry = await resolveEntry(spec);
-
-            if (loadedScripts.has(entry)) {
-                console.warn(`[GlancePlugins] Already loaded: ${entry}`);
-                return;
-            }
-
-            const before = new Set(Object.keys(this._plugins));
-
-            if (spec.name && this._plugins[spec.name]) {
-                console.warn(
-                    `[GlancePlugins] ${spec.name} is already loaded; skipping`
-                );
-                return;
-            }
-
-            if (spec.styles) {
-                for (const style of spec.styles) {
-                    await loadStylesheet(new URL(style, entry).href);
+                if (spec.enabled === false) {
+                    return;
                 }
+
+                const entry = await resolveEntry(spec);
+
+                if (loadedScripts.has(entry)) {
+                    console.warn(`[GlancePlugins] Already loaded: ${entry}`);
+                    return;
+                }
+
+                const before = new Set(Object.keys(this._plugins));
+
+                if (spec.name && this._plugins[spec.name]) {
+                    console.warn(
+                        `[GlancePlugins] ${spec.name} is already loaded; skipping`
+                    );
+                    return;
+                }
+
+                if (spec.styles) {
+                    for (const style of spec.styles) {
+                        await loadStylesheet(new URL(style, entry).href);
+                    }
+                }
+
+                await loadScript(entry);
+
+                const name = spec.name || findRegisteredName(before);
+                const setup = this._plugins[name];
+
+                if (typeof setup !== "function") {
+                    throw new Error(
+                        `Plugin ${name} did not register a setup function`
+                    );
+                }
+
+                const config =
+                    typeof spec.config === "function" ? spec.config() : spec.config;
+
+                setup(config || {});
+            } finally {
+                this._loading = wasLoading;
             }
-
-            await loadScript(entry);
-
-            const name = spec.name || findRegisteredName(before);
-            const setup = this._plugins[name];
-
-            if (typeof setup !== "function") {
-                throw new Error(`Plugin ${name} did not register a setup function`);
-            }
-
-            const config =
-                typeof spec.config === "function" ? spec.config() : spec.config;
-
-            setup(config || {});
         },
     };
 
