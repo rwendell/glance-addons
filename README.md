@@ -1,54 +1,69 @@
 # Glance Plugins
 
-Small, self-hosted plugins for [Glance](https://github.com/glanceapp/glance).
+Plugins for [Glance](https://github.com/glanceapp/glance).
 
-| Plugin | What it does |
-| ------ | ------------ |
-| [Enhanced Search](plugins/search-enhanced/) | Open URLs directly from the search bar and show live Google suggestions. |
-| [Theme Switcher](plugins/theme-switcher/) | Follow the OS light/dark preference using a colorscheme file from `assets/themes/`. |
+| Plugin | Version | Description |
+| ------ | ------- | ----------- |
+| [Plugin Manager](plugins/plugin-manager/) | 1.0.0 | Required. Loads and configures the other plugins. |
+| [Enhanced Search](plugins/search-enhanced/) | 1.0.0 | Opens URLs from the search bar and shows Google suggestions. |
+| [Theme Switcher](plugins/theme-switcher/) | 2.1.0 | Switches a colorscheme's light and dark palettes. Adds a System/Light/Dark control to the header. |
 
-## `plugin-manager.js` is the entry point
+## Requirements
 
-To load other plugins automatically, you need [`plugin-manager.js`](plugin-manager.js). It is the only script referenced from `glance.yml`; it reads the plugin list and configs from `assets/plugins.jsonc`.
+- Glance 0.8 or newer
+- A directory served through [`server.assets-path`](https://github.com/glanceapp/glance/blob/main/docs/configuration.md#assets-path)
+- `curl`, or `wget` on Linux and macOS. Windows 10 and 11 include `curl.exe`.
 
-Each plugin can still be used **standalone** with its own `data-config` attribute if you do not want the manager.
+## Install the plugin manager
 
-## Recommended layout
+The plugin manager is the only plugin in `glance.yml`.
 
-```text
-assets/
-├── plugin-manager.js
-├── plugins.jsonc
-├── plugin-lock.json
-├── themes/
-│   └── kissa.css
-└── .plugins/
-    ├── search-enhanced/
-    │   └── search-enhanced.js
-    └── theme-switcher/
-        └── theme-switcher.js
+Windows:
+
+```bat
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.0/install/install.cmd | cmd
 ```
 
-`themes/` is a convention for user-owned palettes, not a requirement. Any CSS path under assets can be used.
+Linux and macOS:
 
-`glance.yml` only needs the manager:
+```sh
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.0/install/install.sh | sh
+```
+
+The installers write:
+
+- `assets/.plugins/plugin-manager/plugin-manager.js`
+- `assets/plugins.jsonc` with an empty `plugins` array
+- `assets/plugin-lock.json` with an empty `plugins` object
+
+Add this to `glance.yml`:
 
 ```yaml
-server:
-  assets-path: assets
-
 document:
   head: |
-    <script src="/assets/plugin-manager.js"></script>
+    <script src="/assets/.plugins/plugin-manager/plugin-manager.js"></script>
 ```
 
-The plugin manager loads `themes/<colorscheme>.css` automatically, so there is no `theme.custom-css-file` in `glance.yml`.
+Use a different assets directory:
 
-The manager path is relative to itself, so this also works under a `base-url`.
+```sh
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.0/install/install.sh | sh -s -- /path/to/assets
+```
 
-## `plugins.jsonc`
+```bat
+set "GLANCE_ASSETS=D:\path\to\assets"
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.0/install/install.cmd | cmd
+```
 
-This is where every plugin's config lives. Comments and trailing commas are allowed.
+Manual install: copy [`plugins/plugin-manager/plugin-manager.js`](plugins/plugin-manager/plugin-manager.js) to `assets/.plugins/plugin-manager/plugin-manager.js` and add the script tag.
+
+If the manager does not load, check the script path and `server.assets-path`. The browser console reports missing files.
+
+## Add plugins
+
+Add plugin entries to `assets/plugins.jsonc` and install metadata to `assets/plugin-lock.json`.
+
+`assets/plugins.jsonc`:
 
 ```jsonc
 {
@@ -71,36 +86,23 @@ This is where every plugin's config lives. Comments and trailing commas are allo
 }
 ```
 
-| Field | Description |
-| ----- | ----------- |
-| `name` | Plugin name and the default folder name under `.plugins/`. |
-| `config` | Passed to the plugin's `setup(config)`. |
-| `enabled` | Set to `false` to skip the plugin. |
-| `path` | Optional local script path, relative to `assets/`. |
-| `url` | Optional direct script URL. |
-| `styles` | Optional stylesheet URLs. |
-
-Plugins are loaded in array order. If `path` is omitted, the manager uses `plugin-lock.json` and then falls back to `.plugins/<name>/<name>.js`.
-
-When `config.colorscheme` is set, the manager automatically loads `themes/<colorscheme>.css` relative to the assets directory. An explicit `styles` array overrides that. Recommended layout for user palettes: `assets/themes/<name>.css`.
-
-## `plugin-lock.json`
-
-Strict JSON; this is the machine-managed install metadata. Keep the local `path` and the source `repo`/`ref`/`entry` together so the files can be updated or re-downloaded later.
+`assets/plugin-lock.json`:
 
 ```json
 {
   "version": 1,
   "plugins": {
     "theme-switcher": {
+      "version": "2.1.0",
       "repo": "rwendell/glance-plugins",
-      "ref": "v1.2.1",
+      "ref": "v2.0.0",
       "entry": "plugins/theme-switcher/theme-switcher.js",
       "path": ".plugins/theme-switcher/theme-switcher.js"
     },
     "search-enhanced": {
+      "version": "1.0.0",
       "repo": "rwendell/glance-plugins",
-      "ref": "v1.2.1",
+      "ref": "v2.0.0",
       "entry": "plugins/search-enhanced/search-enhanced.js",
       "path": ".plugins/search-enhanced/search-enhanced.js"
     }
@@ -108,11 +110,42 @@ Strict JSON; this is the machine-managed install metadata. Keep the local `path`
 }
 ```
 
-If a local file is missing or fails to load, the manager tries the `repo` + `ref` + `entry` URL from jsDelivr.
+The manager loads `path` first. If that file is missing, it loads the `repo` + `ref` + `entry` URL from jsDelivr.
+
+Theme Switcher reads `assets/themes/<colorscheme>.css`. The file must define both variants:
+
+```css
+html[data-glance-scheme="dark"]  { /* dark palette */ }
+html[data-glance-scheme="light"] { /* light palette */ }
+```
+
+The [Plugin Manager docs](plugins/plugin-manager/README.md) list every `plugins.jsonc` field and the remote-loading API.
+
+## Versions
+
+Each plugin has its own semantic version. The plugin source declares it as `setup.version`, [`glance-plugins.json`](glance-plugins.json) lists current versions, and `plugin-lock.json` records installed versions.
+
+Repository tags such as `v2.0.0` are distribution snapshots. They do not replace per-plugin versions.
+
+The manager appends the installed version to local script URLs and logs a warning when the lock version differs from the plugin's `setup.version`.
+
+## Layout
+
+```text
+assets/
+├── plugins.jsonc
+├── plugin-lock.json
+├── themes/
+│   └── kissa.css
+└── .plugins/
+    ├── plugin-manager/
+    ├── search-enhanced/
+    └── theme-switcher/
+```
 
 ## Standalone plugins
 
-No manager required:
+Enhanced Search and Theme Switcher run without the manager. Copy the plugin file into `assets/` and use its own `data-config` attribute. See each plugin README for the script tag.
 
 ```yaml
 document:
@@ -124,53 +157,22 @@ document:
       data-config='{"suggestions":true}'></script>
 ```
 
-The theme switcher should load without `defer` so it can set the color-scheme marker before paint.
-
-## Remote loading
-
-The manager also exposes a small loader API for loading plugins directly from GitHub or a URL:
-
-```js
-GlancePlugins.setup({
-  plugins: [
-    {
-      repo: "rwendell/glance-plugins",
-      ref: "v1.2.1",
-      name: "search-enhanced",
-      config: { suggestions: true }
-    }
-  ]
-});
-```
-
-Specs support `repo`, `name`, `ref`, `url`, `entry`, `base`, `manifest`, `styles`, `enabled`, and `config` (object or function). `repo` + `name` resolves through [`glance-plugins.json`](glance-plugins.json), falling back to `plugins/<name>/<name>.js`.
-
-The loader can also be configured with `data-config` on its script tag:
-
-```yaml
-document:
-  head: |
-    <script src="/assets/plugin-manager.js" data-config='{"plugins":[{"repo":"rwendell/glance-plugins","name":"search-enhanced","config":{"suggestions":true}}]}'></script>
-```
-
 ## Repository layout
 
 ```text
-plugin-manager.js          # required to auto-load plugins
-glance-plugins.json        # remote name -> entry manifest
+install/
+├── install.sh
+└── install.cmd
+glance-plugins.json
 plugins/
+├── plugin-manager/
 ├── search-enhanced/
 └── theme-switcher/
 ```
 
 ## Security
 
-Plugins are ordinary JavaScript and run with full access to your dashboard page. Only load repositories and refs you trust. Pinning `ref` to a tag or commit avoids silently picking up new commits.
-
-## Requirements
-
-- Glance v0.8 or newer
-- A directory served through [`server.assets-path`](https://github.com/glanceapp/glance/blob/main/docs/configuration.md#assets-path)
+Plugins run as JavaScript with access to the dashboard page. Load repositories and refs you trust. A tag or commit in `ref` keeps installs on a fixed version.
 
 ## License
 

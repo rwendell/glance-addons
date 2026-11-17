@@ -1,8 +1,8 @@
 /*
  * Glance Theme Switcher
  *
- * Applies the OS light/dark preference to <html data-glance-scheme>. The
- * plugin manager loads themes/<colorscheme>.css automatically.
+ * Applies a colorscheme's light/dark palette and provides a manual
+ * System/Light/Dark control in the header.
  *
  * Config:
  *   { "colorscheme": "kissa" }
@@ -18,9 +18,20 @@
     "use strict";
 
     const NAME = "theme-switcher";
+    const VERSION = "2.1.0";
     const ATTRIBUTE = "data-glance-scheme";
+    const STORAGE_KEY = "glance-theme-mode";
+    const MODES = ["system", "light", "dark"];
     const LIGHT_SELECTOR = /data-glance-scheme\s*=\s*["']light["']/;
     const DARK_SELECTOR = /data-glance-scheme\s*=\s*["']dark["']/;
+
+    const ICON_SYSTEM =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>';
+    const ICON_LIGHT =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>';
+    const ICON_DARK =
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>';
+
     let initialized = false;
 
     function readInlineConfig() {
@@ -105,6 +116,75 @@
         }
     }
 
+    function injectStyles() {
+        if (document.getElementById("gts-styles")) {
+            return;
+        }
+
+        const style = document.createElement("style");
+        style.id = "gts-styles";
+        style.textContent = `
+            html.gts-active .theme-picker,
+            html.gts-active .mobile-navigation .theme-choices {
+                display: none !important;
+            }
+
+            .gts-control {
+                display: flex;
+                flex: none;
+                align-items: center;
+                gap: 0.2rem;
+                margin-left: 1rem;
+                padding: 0.2rem;
+                border-radius: calc(var(--border-radius) * 2);
+                background: var(--color-widget-background-highlight);
+            }
+
+            .gts-button {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 2.8rem;
+                height: 2.8rem;
+                padding: 0;
+                border: 0;
+                border-radius: var(--border-radius);
+                background: transparent;
+                color: var(--color-text-subdue);
+                cursor: pointer;
+            }
+
+            .gts-button:hover,
+            .gts-button[aria-pressed="true"] {
+                color: var(--color-text-highlight);
+                background: var(--color-widget-background);
+            }
+
+            .gts-button svg {
+                width: 1.6rem;
+                height: 1.6rem;
+                stroke: currentColor;
+                fill: none;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+
+            .mobile-navigation .gts-control {
+                margin-left: 0.5rem;
+                padding: 0;
+                background: transparent;
+            }
+
+            .mobile-navigation .gts-button {
+                width: 2.4rem;
+                height: 2.4rem;
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
     function setup(userConfig) {
         if (initialized) {
             return;
@@ -131,25 +211,135 @@
         const root = document.documentElement;
         const media = window.matchMedia("(prefers-color-scheme: light)");
 
-        root.dataset.glanceColorscheme = colorscheme;
+        function readMode() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
 
-        function apply(isLight) {
-            root.setAttribute(ATTRIBUTE, isLight ? "light" : "dark");
+                if (stored === "auto" || stored === "off") {
+                    return "system";
+                }
+
+                return MODES.includes(stored) ? stored : "system";
+            } catch {
+                return "system";
+            }
         }
 
-        apply(media.matches);
+        let mode = readMode();
 
-        media.addEventListener("change", (event) => {
-            apply(event.matches);
+        root.dataset.glanceColorscheme = colorscheme;
+
+        function syncControls() {
+            for (const button of document.querySelectorAll(".gts-button")) {
+                button.setAttribute(
+                    "aria-pressed",
+                    button.dataset.mode === mode ? "true" : "false"
+                );
+            }
+        }
+
+        function apply() {
+            const light =
+                mode === "light" || (mode === "system" && media.matches);
+
+            root.setAttribute(ATTRIBUTE, light ? "light" : "dark");
+            syncControls();
+        }
+
+        function setMode(nextMode) {
+            if (!MODES.includes(nextMode)) {
+                return;
+            }
+
+            mode = nextMode;
+
+            try {
+                localStorage.setItem(STORAGE_KEY, mode);
+            } catch {
+                // localStorage can be unavailable in private browsing modes.
+            }
+
+            apply();
+        }
+
+        function createControl() {
+            const group = document.createElement("div");
+            group.className = "gts-control";
+            group.setAttribute("role", "group");
+            group.setAttribute("aria-label", "Color scheme");
+
+            const choices = [
+                ["system", "System", ICON_SYSTEM],
+                ["light", "Light", ICON_LIGHT],
+                ["dark", "Dark", ICON_DARK],
+            ];
+
+            for (const [value, label, icon] of choices) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "gts-button";
+                button.dataset.mode = value;
+                button.title = label;
+                button.setAttribute("aria-label", `${label} color scheme`);
+                button.innerHTML = icon;
+                button.addEventListener("click", () => setMode(value));
+                group.appendChild(button);
+            }
+
+            return group;
+        }
+
+        function mountControls() {
+            const header = document.querySelector(".header-container .header");
+
+            if (header && !header.querySelector(".gts-control")) {
+                header.appendChild(createControl());
+            }
+
+            const mobileIcons = document.querySelector(
+                ".mobile-navigation-icons"
+            );
+
+            if (mobileIcons && !mobileIcons.querySelector(".gts-control")) {
+                mobileIcons.appendChild(createControl());
+            }
+
+            syncControls();
+        }
+
+        function whenReady(callback) {
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", callback, {
+                    once: true,
+                });
+                return;
+            }
+
+            callback();
+        }
+
+        injectStyles();
+        root.classList.add("gts-active");
+        apply();
+        whenReady(mountControls);
+
+        media.addEventListener("change", () => {
+            if (mode === "system") {
+                apply();
+            }
         });
 
         requestAnimationFrame(() => validateTheme(colorscheme));
 
         window.GlanceThemeSwitcher = {
             colorscheme,
-            refresh: () => apply(media.matches),
+            getMode: () => mode,
+            setMode,
+            refresh: apply,
         };
     }
+
+    setup.version = VERSION;
 
     const registry = window.GlancePlugins || (window.GlancePlugins = {});
 

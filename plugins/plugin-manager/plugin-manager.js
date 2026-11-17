@@ -1,19 +1,19 @@
 /*
  * Glance Plugin Manager
  *
- * Local mode (default): reads plugins.jsonc + plugin-lock.json from the same
- * directory as this script and loads installed plugins from .plugins/.
+ * Local mode (default): reads plugins.jsonc + plugin-lock.json from the assets
+ * directory and loads installed plugins from .plugins/.
  *
- *   assets/plugin-manager.js
+ *   assets/.plugins/plugin-manager/plugin-manager.js
  *   assets/plugins.jsonc
  *   assets/plugin-lock.json
  *   assets/.plugins/<name>/<name>.js
  *
- *   <script src="/assets/plugin-manager.js"></script>
+ *   <script src="/assets/.plugins/plugin-manager/plugin-manager.js"></script>
  *
  * Remote mode: load plugins from GitHub or any URL directly.
  *
- *   <script src="/assets/plugin-manager.js" data-config='{
+ *   <script src="/assets/.plugins/plugin-manager/plugin-manager.js" data-config='{
  *     "plugins": [
  *       {"repo": "rwendell/glance-plugins", "name": "search-enhanced",
  *        "config": {"suggestions": true}}
@@ -42,7 +42,7 @@
         return;
     }
 
-    const MANAGER_VERSION = 2;
+    const VERSION = "1.0.0";
     const DEFAULT_REF = "main";
     const MANIFEST_NAME = "glance-plugins.json";
     const loadedScripts = new Set();
@@ -380,10 +380,11 @@
                     : null;
             const configuredStyles = entry.styles ?? lockEntry.styles ?? [];
             const localUrl = new URL(localPath, base).href;
-            const version = lockEntry.ref || lockEntry.version || "";
+            const version = lockEntry.version || lockEntry.ref || "";
 
             return {
                 name,
+                version,
                 url: entry.url || versionedUrl(localUrl, version),
                 fallback,
                 styles: configuredStyles.map((style) =>
@@ -397,7 +398,7 @@
 
     const registry = {
         __manager: true,
-        version: MANAGER_VERSION,
+        version: VERSION,
         assetsBase: null,
         _loading: false,
         _plugins: Object.create(null),
@@ -412,6 +413,11 @@
 
         get(name) {
             return this._plugins[name];
+        },
+
+        getVersion(name) {
+            const setup = this._plugins[name];
+            return setup && setup.version ? setup.version : null;
         },
 
         setup(options) {
@@ -528,6 +534,13 @@
                     typeof spec.config === "function" ? spec.config() : spec.config;
 
                 setup(config || {});
+
+                if (spec.version && setup.version && spec.version !== setup.version) {
+                    console.warn(
+                        `[GlancePlugins] ${name}: lock version ${spec.version} ` +
+                            `does not match plugin version ${setup.version}`
+                    );
+                }
             } finally {
                 this._loading = wasLoading;
             }
@@ -542,9 +555,14 @@
         return;
     }
 
-    const base = new URL(".", script.src);
+    const scriptBase = new URL(".", script.src);
+    const defaultAssetsBase = scriptBase.pathname.includes(
+        "/.plugins/plugin-manager/"
+    )
+        ? new URL("../../", scriptBase)
+        : scriptBase;
 
-    registry.assetsBase = base.href;
+    registry.assetsBase = defaultAssetsBase.href;
 
     if (script.dataset.config) {
         try {
@@ -557,33 +575,42 @@
     }
 
     (async () => {
-        const configUrl = new URL(
-            script.dataset.configFile || "plugins.jsonc",
-            base
-        );
-        const lockUrl = new URL(
-            script.dataset.lockFile || "plugin-lock.json",
-            base
+        const configFile = script.dataset.configFile || "plugins.jsonc";
+        const lockFile = script.dataset.lockFile || "plugin-lock.json";
+        const candidates = [defaultAssetsBase, scriptBase].filter(
+            (value, index, all) =>
+                all.findIndex((candidate) => candidate.href === value.href) ===
+                index
         );
 
-        try {
-            const config = await readJsonc(configUrl);
+        for (const base of candidates) {
+            try {
+                const config = await readJsonc(new URL(configFile, base));
 
-            if (!config) {
+                if (!config) {
+                    continue;
+                }
+
+                let lock = null;
+
+                try {
+                    lock = await readJson(new URL(lockFile, base));
+                } catch {
+                    // The lock file is optional; paths fall back to .plugins/.
+                }
+
+                registry.assetsBase = base.href;
+                await registry.setup({
+                    plugins: localSpecs(config, lock, base),
+                });
+                return;
+            } catch (error) {
+                console.error(
+                    "[GlancePlugins] Failed to load plugins.jsonc:",
+                    error
+                );
                 return;
             }
-
-            let lock = null;
-
-            try {
-                lock = await readJson(lockUrl);
-            } catch {
-                // The lock file is optional; paths fall back to .plugins/.
-            }
-
-            await registry.setup({ plugins: localSpecs(config, lock, base) });
-        } catch (error) {
-            console.error("[GlancePlugins] Failed to load plugins.jsonc:", error);
         }
     })();
 })();

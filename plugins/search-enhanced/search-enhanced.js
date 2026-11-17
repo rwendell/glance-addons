@@ -24,6 +24,7 @@
     "use strict";
 
     const NAME = "search-enhanced";
+    const VERSION = "1.0.0";
     let initialized = false;
     let config = null;
     let maxSuggestions = 8;
@@ -605,6 +606,8 @@
             start();
         }
     }
+
+    setup.version = VERSION;
 
     const registry = window.GlancePlugins || (window.GlancePlugins = {});
 
