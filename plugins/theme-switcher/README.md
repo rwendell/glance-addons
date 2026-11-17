@@ -4,6 +4,8 @@ Follows your operating system's light/dark preference and switches between two G
 
 The switcher avoids a flash of the wrong theme when it is loaded before the page paints. Your palette lives in CSS, so no request is needed to switch.
 
+The plugin can be used standalone with `data-config`, or installed under `assets/.plugins/` and loaded by [`plugin-manager.js`](../../README.md). The [Kissa example](examples/kissa.css) includes a `prefers-color-scheme` fallback for the brief period before the manager finishes loading.
+
 ## How it works
 
 The plugin sets:
@@ -101,7 +103,7 @@ document:
       data-config='{"lightPreset":"my-light","darkPreset":"my-dark","autoPreset":"my-auto"}'></script>
 ```
 
-Or use the [plugin loader](../README.md#plugin-loader), which passes a config object to `setup()`:
+Or use the [plugin manager](../../README.md#remote-loading), which passes a config object to `setup()`:
 
 ```js
 GlancePlugins.setup({

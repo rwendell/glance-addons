@@ -1,53 +1,48 @@
 /*
- * Glance Plugins Loader
+ * Glance Plugin Manager
  *
- * Loads Glance plugins from GitHub (via jsDelivr) or any URL, then calls each
- * plugin's setup(config). Plugins can be a repo + name, a direct URL, or a
- * string shorthand:
+ * Local mode (default): reads plugins.jsonc + plugin-lock.json from the same
+ * directory as this script and loads installed plugins from .plugins/.
  *
- *   GlancePlugins.setup({
- *     plugins: [
- *       {
- *         repo: "rwendell/glance-plugins",
- *         name: "theme-switcher",
- *         config: { lightPreset: "kissa-latte", darkPreset: "kissa-macchiato" }
- *       },
- *       {
- *         repo: "rwendell/glance-plugins",
- *         name: "search-enhanced",
- *         config: { suggestions: true }
- *       }
- *     ]
- *   });
+ *   assets/plugin-manager.js
+ *   assets/plugins.jsonc
+ *   assets/plugin-lock.json
+ *   assets/.plugins/<name>/<name>.js
  *
- * Shorthand:
+ *   <script src="/assets/plugin-manager.js"></script>
  *
- *   GlancePlugins.setup({
- *     plugins: ["rwendell/glance-plugins#theme-switcher"]
- *   });
+ * Remote mode: load plugins from GitHub or any URL directly.
  *
- * Or configure the loader itself:
- *
- *   <script src="/assets/glance-plugins.js" data-config='{
+ *   <script src="/assets/plugin-manager.js" data-config='{
  *     "plugins": [
- *       {"url": "/assets/search-enhanced.js", "config": {"suggestions": true}}
+ *       {"repo": "rwendell/glance-plugins", "name": "search-enhanced",
+ *        "config": {"suggestions": true}}
  *     ]
  *   }'></script>
  *
- * Plugin contract: a plugin script registers itself with
+ * Or from JavaScript:
+ *
+ *   GlancePlugins.setup({
+ *     plugins: [
+ *       {"repo": "rwendell/glance-plugins", "name": "theme-switcher",
+ *        "config": {"lightPreset": "kissa-latte"}}
+ *     ]
+ *   });
+ *
+ * Plugin contract: plugins register themselves with
  *
  *   window.GlancePlugins.register("name", function setup(config) { ... });
  *
- * and must skip automatic setup while `GlancePlugins._loading` is true.
+ * and skip automatic setup while `GlancePlugins._loading` is true.
  */
-(() => {
+(function () {
     "use strict";
 
-    if (window.GlancePlugins && window.GlancePlugins.__loader) {
+    if (window.GlancePlugins && window.GlancePlugins.__manager) {
         return;
     }
 
-    const LOADER_VERSION = 1;
+    const MANAGER_VERSION = 2;
     const DEFAULT_REF = "main";
     const MANIFEST_NAME = "glance-plugins.json";
     const loadedScripts = new Set();
@@ -55,6 +50,115 @@
     const stylesheetPromises = new Map();
     const manifestCache = new Map();
     let setupQueue = Promise.resolve();
+
+    function parseJsonc(text) {
+        let withoutComments = "";
+        let inString = false;
+        let escaped = false;
+        let index = 0;
+
+        while (index < text.length) {
+            const char = text[index];
+            const next = text[index + 1];
+
+            if (inString) {
+                withoutComments += char;
+
+                if (escaped) {
+                    escaped = false;
+                } else if (char === "\\") {
+                    escaped = true;
+                } else if (char === '"') {
+                    inString = false;
+                }
+
+                index++;
+                continue;
+            }
+
+            if (char === '"') {
+                inString = true;
+                withoutComments += char;
+                index++;
+                continue;
+            }
+
+            if (char === "/" && next === "/") {
+                while (index < text.length && text[index] !== "\n") {
+                    index++;
+                }
+
+                continue;
+            }
+
+            if (char === "/" && next === "*") {
+                index += 2;
+
+                while (
+                    index < text.length &&
+                    !(text[index] === "*" && text[index + 1] === "/")
+                ) {
+                    index++;
+                }
+
+                index += 2;
+                continue;
+            }
+
+            withoutComments += char;
+            index++;
+        }
+
+        let withoutTrailingCommas = "";
+        inString = false;
+        escaped = false;
+
+        for (let i = 0; i < withoutComments.length; i++) {
+            const char = withoutComments[i];
+
+            if (inString) {
+                withoutTrailingCommas += char;
+
+                if (escaped) {
+                    escaped = false;
+                } else if (char === "\\") {
+                    escaped = true;
+                } else if (char === '"') {
+                    inString = false;
+                }
+
+                continue;
+            }
+
+            if (char === '"') {
+                inString = true;
+                withoutTrailingCommas += char;
+                continue;
+            }
+
+            if (char === ",") {
+                let lookahead = i + 1;
+
+                while (
+                    lookahead < withoutComments.length &&
+                    /\s/.test(withoutComments[lookahead])
+                ) {
+                    lookahead++;
+                }
+
+                if (
+                    withoutComments[lookahead] === "}" ||
+                    withoutComments[lookahead] === "]"
+                ) {
+                    continue;
+                }
+            }
+
+            withoutTrailingCommas += char;
+        }
+
+        return JSON.parse(withoutTrailingCommas);
+    }
 
     function normalizeSpec(rawSpec) {
         if (typeof rawSpec === "string") {
@@ -103,6 +207,26 @@
         return `https://cdn.jsdelivr.net/gh/${repo}@${ref}/`;
     }
 
+    async function readJson(url) {
+        const response = await fetch(url, { cache: "no-cache" });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        return response.json();
+    }
+
+    async function readJsonc(url) {
+        const response = await fetch(url, { cache: "no-cache" });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        return parseJsonc(await response.text());
+    }
+
     async function readManifest(url) {
         if (manifestCache.has(url)) {
             return manifestCache.get(url);
@@ -111,11 +235,7 @@
         let manifest = null;
 
         try {
-            const response = await fetch(url, { cache: "no-cache" });
-
-            if (response.ok) {
-                manifest = await response.json();
-            }
+            manifest = await readJson(url);
         } catch {
             // A manifest is optional. Fall back to {name}/{name}.js below.
         }
@@ -150,7 +270,7 @@
             return new URL(info.entry, base).href;
         }
 
-        return new URL(`${spec.name}/${spec.name}.js`, base).href;
+        return new URL(`plugins/${spec.name}/${spec.name}.js`, base).href;
     }
 
     function loadScript(url) {
@@ -228,9 +348,41 @@
         );
     }
 
+    function localSpecs(config, lock, base) {
+        const entries = Array.isArray(config.plugins) ? config.plugins : [];
+        const lockedPlugins = (lock && lock.plugins) || {};
+
+        return entries.map((entry) => {
+            const name = entry.name;
+
+            if (!name) {
+                throw new Error("Each entry in plugins.jsonc needs a name");
+            }
+
+            const lockEntry = lockedPlugins[name] || {};
+            const localPath =
+                entry.path || lockEntry.path || `.plugins/${name}/${name}.js`;
+            const fallback =
+                lockEntry.repo && lockEntry.entry
+                    ? `https://cdn.jsdelivr.net/gh/${lockEntry.repo}@${
+                          lockEntry.ref || DEFAULT_REF
+                      }/${lockEntry.entry}`
+                    : null;
+
+            return {
+                name,
+                url: entry.url || new URL(localPath, base).href,
+                fallback,
+                styles: entry.styles || lockEntry.styles || [],
+                config: entry.config || {},
+                enabled: entry.enabled !== false,
+            };
+        });
+    }
+
     const registry = {
-        __loader: true,
-        version: LOADER_VERSION,
+        __manager: true,
+        version: MANAGER_VERSION,
         _loading: false,
         _plugins: Object.create(null),
 
@@ -315,7 +467,19 @@
                     }
                 }
 
-                await loadScript(entry);
+                try {
+                    await loadScript(entry);
+                } catch (error) {
+                    if (!spec.fallback || spec.fallback === entry) {
+                        throw error;
+                    }
+
+                    console.warn(
+                        `[GlancePlugins] Falling back to ${spec.fallback}`,
+                        error
+                    );
+                    await loadScript(spec.fallback);
+                }
 
                 const name = spec.name || findRegisteredName(before);
                 const setup = this._plugins[name];
@@ -339,13 +503,51 @@
     window.GlancePlugins = registry;
 
     const script = document.currentScript;
-    const inlineConfig = script && script.dataset.config;
 
-    if (inlineConfig) {
+    if (!script) {
+        return;
+    }
+
+    const base = new URL(".", script.src);
+
+    if (script.dataset.config) {
         try {
-            registry.setup(JSON.parse(inlineConfig));
+            registry.setup(JSON.parse(script.dataset.config));
         } catch (error) {
             console.error("[GlancePlugins] Invalid data-config JSON:", error);
         }
+
+        return;
     }
+
+    (async () => {
+        const configUrl = new URL(
+            script.dataset.configFile || "plugins.jsonc",
+            base
+        );
+        const lockUrl = new URL(
+            script.dataset.lockFile || "plugin-lock.json",
+            base
+        );
+
+        try {
+            const config = await readJsonc(configUrl);
+
+            if (!config) {
+                return;
+            }
+
+            let lock = null;
+
+            try {
+                lock = await readJson(lockUrl);
+            } catch {
+                // The lock file is optional; paths fall back to .plugins/.
+            }
+
+            await registry.setup({ plugins: localSpecs(config, lock, base) });
+        } catch (error) {
+            console.error("[GlancePlugins] Failed to load plugins.jsonc:", error);
+        }
+    })();
 })();

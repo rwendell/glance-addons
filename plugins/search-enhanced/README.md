@@ -11,9 +11,11 @@ Upgrades the built-in Glance search widget with:
 
 When a query looks like a URL, the dropdown shows two choices: **Open** and **Search for "…"**, so you can always force a normal search.
 
+The plugin can be used standalone with `data-config`, or installed under `assets/.plugins/` and loaded by [`plugin-manager.js`](../../README.md).
+
 ## Installation
 
-1. Copy [`search-enhanced.js`](search-enhanced.js) into your Glance assets directory. With `server.assets-path: assets`, that is `assets/search-enhanced.js` next to `glance.yml`.
+1. Copy [`search-enhanced.js`](search-enhanced.js) into your Glance assets directory. With `server.assets-path: assets`, that is `assets/search-enhanced.js` next to `glance.yml` for a standalone install. For the manager, use `assets/.plugins/search-enhanced/search-enhanced.js`.
 
 2. Load it from `document.head` and put the config on the plugin's own script tag:
 
@@ -46,7 +48,7 @@ document:
       data-config='{"directUrls":true,"suggestions":true,"maxSuggestions":8}'></script>
 ```
 
-Or with the [plugin loader](../README.md#plugin-loader):
+Or with the [plugin manager](../../README.md#remote-loading):
 
 ```js
 GlancePlugins.setup({

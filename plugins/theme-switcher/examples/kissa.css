@@ -9,6 +9,22 @@
  * The theme switcher plugin sets data-glance-scheme on <html>.
  */
 
+/* Before the plugin manager finishes loading, follow the OS preference so
+ * light-mode users do not get a dark flash. */
+@media (prefers-color-scheme: light) {
+    html:not([data-glance-scheme]) {
+        --scheme: 100% -;
+        --bgh: 48;
+        --bgs: 20%;
+        --bgl: 95%;
+        --cm: 1;
+        --tsm: 1.6;
+        --color-primary: hsl(213 53% 43%);
+        --color-positive: hsl(146 33% 33%);
+        --color-negative: hsl(0 44% 43%);
+    }
+}
+
 html[data-glance-scheme="dark"] {
     --scheme: ;
     --bgh: 40;   /* #1F1C16 */
