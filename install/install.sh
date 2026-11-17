@@ -1,16 +1,13 @@
 #!/bin/sh
-# Installs the Glance plugin manager and updater.
+# Installs the Glance plugin manager.
 # Usage: sh install.sh [assets-dir] [ref]
 
 set -eu
 
 ASSETS="${1:-${GLANCE_ASSETS:-assets}}"
-REF="${2:-${GLANCE_PLUGINS_REF:-v2.1.0}}"
+REF="${2:-${GLANCE_PLUGINS_REF:-v3.0.0}}"
 RAW="https://raw.githubusercontent.com/rwendell/glance-plugins/$REF"
-RELEASE="https://github.com/rwendell/glance-plugins/releases/download/$REF"
-TARGET_DIR="$ASSETS/.plugins/plugin-manager"
-MANAGER="$TARGET_DIR/plugin-manager.js"
-UPDATER="$TARGET_DIR/glance-plugins"
+TARGET="$ASSETS/plugin-manager.js"
 
 download() {
     URL="$1"
@@ -26,41 +23,17 @@ download() {
     fi
 }
 
-case "$(uname -s)" in
-    Linux) OS=linux ;;
-    Darwin) OS=darwin ;;
-    *)
-        echo "Unsupported OS: $(uname -s)" >&2
-        exit 1
-        ;;
-esac
-
-case "$(uname -m)" in
-    x86_64|amd64) ARCH=amd64 ;;
-    aarch64|arm64) ARCH=arm64 ;;
-    *)
-        echo "Unsupported architecture: $(uname -m)" >&2
-        exit 1
-        ;;
-esac
-
-mkdir -p "$TARGET_DIR"
+mkdir -p "$ASSETS/plugins"
 
 echo "Downloading plugin-manager ($REF)..."
-download "$RAW/plugins/plugin-manager/plugin-manager.js" "$MANAGER"
+download "$RAW/plugins/plugin-manager/plugin-manager.js" "$TARGET"
 
-echo "Downloading updater ($REF)..."
-download "$RELEASE/glance-plugins-$OS-$ARCH" "$UPDATER"
-chmod +x "$UPDATER"
-
-if [ ! -f "$ASSETS/plugins.jsonc" ]; then
-    printf '{\n  "plugins": []\n}\n' > "$ASSETS/plugins.jsonc"
-    echo "Created $ASSETS/plugins.jsonc"
+if [ ! -f "$ASSETS/plugins.json" ]; then
+    printf '{\n  "plugins": []\n}\n' > "$ASSETS/plugins.json"
+    echo "Created $ASSETS/plugins.json"
 fi
 
-printf '\nPlugin manager installed to %s\n' "$MANAGER"
-printf 'Updater installed to %s\n\n' "$UPDATER"
+printf '\nPlugin manager installed to %s\n\n' "$TARGET"
 printf 'Add this to glance.yml:\n\n'
-printf 'document:\n  head: |\n    <script src="/assets/.plugins/plugin-manager/plugin-manager.js"></script>\n'
-printf '\nRun the updater after editing plugins.jsonc:\n\n'
-printf '  %s update\n' "$UPDATER"
+printf 'document:\n  head: |\n    <script src="/assets/plugin-manager.js"></script>\n'
+printf '\nEdit %s/plugins.json to add plugins.\n' "$ASSETS"

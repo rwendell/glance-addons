@@ -4,7 +4,7 @@ Plugins for [Glance](https://github.com/glanceapp/glance).
 
 | Plugin | Version | Description |
 | ------ | ------- | ----------- |
-| [Plugin Manager](plugins/plugin-manager/) | 1.1.0 | Required. Loads and configures the other plugins. |
+| [Plugin Manager](plugins/plugin-manager/) | 2.0.0 | Required. Resolves and loads the other plugins in the browser. |
 | [Enhanced Search](plugins/search-enhanced/) | 1.0.0 | Opens URLs from the search bar and shows Google suggestions. |
 | [Theme Switcher](plugins/theme-switcher/) | 2.1.4 | Switches a colorscheme's light and dark palettes. Adds a light/dark/system control to the header. |
 
@@ -12,57 +12,46 @@ Plugins for [Glance](https://github.com/glanceapp/glance).
 
 - Glance 0.8 or newer
 - A directory served through [`server.assets-path`](https://github.com/glanceapp/glance/blob/main/docs/configuration.md#assets-path)
-- `curl`, or `wget` on Linux and macOS. Windows 10 and 11 include `curl.exe`.
+- Network access to jsDelivr and GitHub for remote plugins
 
 ## Install
 
 Windows:
 
 ```bat
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.1.0/install/install.cmd | cmd
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v3.0.0/install/install.cmd | cmd
 ```
 
 Linux and macOS:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.1.0/install/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v3.0.0/install/install.sh | sh
 ```
 
-The installer writes the plugin manager and updater to `assets/.plugins/plugin-manager/`, then creates an empty `assets/plugins.jsonc`.
+The installer writes:
+
+- `assets/plugin-manager.js`
+- `assets/plugins.json` with an empty `plugins` array
+- `assets/plugins/` for local plugins
 
 Add this to `glance.yml`:
 
 ```yaml
 document:
   head: |
-    <script src="/assets/.plugins/plugin-manager/plugin-manager.js"></script>
+    <script src="/assets/plugin-manager.js"></script>
 ```
 
-## Installing Plugins
+## `plugins.json`
 
-### Standalone plugins
+Strict JSON. No comments or trailing commas.
 
-Copy the plugin file into `assets/` and use its own `data-config` attribute. See each plugin README for the script tag.
-
-```yaml
-document:
-  head: |
-    <link rel="stylesheet" href="/assets/themes/kissa.css">
-    <script src="/assets/theme-switcher.js"
-      data-config='{"colorscheme":"kissa"}'></script>
-    <script src="/assets/search-enhanced.js" defer
-      data-config='{"suggestions":true}'></script>
-```
-
-### With [Plugin Manager](plugins/plugin-manager/)
-
-Add plugin entries to `assets/plugins.jsonc`:
-
-```jsonc
+```json
 {
   "plugins": [
     {
       "name": "theme-switcher",
+      "plugin": "rwendell/glance-plugins",
       "version": false,
       "config": {
         "colorscheme": "kissa"
@@ -70,41 +59,78 @@ Add plugin entries to `assets/plugins.jsonc`:
     },
     {
       "name": "search-enhanced",
+      "plugin": "rwendell/glance-plugins",
       "version": "^1.0.0",
       "config": {
-        "directUrls": true,
-        "suggestions": true,
-        "maxSuggestions": 8
+        "suggestions": true
       }
     }
   ]
 }
 ```
 
-Run the updater after editing `plugins.jsonc`:
+| Field | Description |
+| ----- | ----------- |
+| `name` | Plugin name and folder name under `plugins/`. |
+| `plugin` | GitHub repository as `owner/repo`. Defaults to `rwendell/glance-plugins`. |
+| `version` | Semver range or `false`. Defaults to `false`. |
+| `config` | Object passed to the plugin's `setup(config)`. |
+| `enabled` | Set to `false` to skip the plugin. |
+| `path` | Optional local script path, relative to `assets/`. |
+| `url` | Optional direct script URL. |
+| `styles` | Optional stylesheet URLs, relative to `assets/`. |
 
-```sh
-assets/.plugins/plugin-manager/glance-plugins update
+`version` accepts lazy.nvim-style semver ranges. See [lazy.nvim versioning](https://lazy.folke.io/spec/versioning).
+
+Plugin tags use `<name>-v<semver>`, for example `theme-switcher-v2.1.4`.
+
+## Runtime
+
+- The manager loads when the dashboard opens.
+- It resolves versions, loads plugin scripts from jsDelivr, and calls each `setup(config)`.
+- It stores the resolved lock in `localStorage` under `glance-plugin-lock-v1`.
+- It checks `plugins.json` every 10 seconds and reloads the dashboard when the file changes.
+- No separate process or lock file.
+
+```js
+GlancePlugins.getLock();
+GlancePlugins.refresh();
 ```
 
-```bat
-assets\.plugins\plugin-manager\glance-plugins.exe update
+## Local plugins
+
+`assets/plugins/<name>/<name>.js` takes precedence over the remote plugin.
+
+```text
+assets/plugins/my-plugin/my-plugin.js
 ```
 
-The updater resolves versions, downloads plugin files into `assets/.plugins/`, and writes `assets/plugin-lock.json`. Do not edit the lock file.
+```json
+{
+  "plugins": [
+    {
+      "name": "my-plugin",
+      "config": {}
+    }
+  ]
+}
+```
 
-## Example Layout
+Local plugins do not need `plugin` or `version`.
+
+## Example layout
 
 ```text
 assets/
-├── plugins.jsonc
-├── plugin-lock.json
-├── themes/
-│   └── kissa.css
-└── .plugins/
-    ├── plugin-manager/
-    │   ├── plugin-manager.js
-    │   └── glance-plugins(.exe)
-    ├── search-enhanced/
-    └── theme-switcher/
+├── plugin-manager.js
+├── plugins.json
+├── plugins/
+│   └── my-plugin/
+│       └── my-plugin.js
+└── themes/
+    └── kissa.css
 ```
+
+## Security
+
+Remote plugins run as JavaScript with access to the dashboard page. Pin `version` to a tag for fixed releases. Use local plugins under `assets/plugins/` for code you do not want loaded from jsDelivr.

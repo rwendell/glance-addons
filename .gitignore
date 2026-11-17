@@ -1,3 +1,2 @@
-glance-plugins
-glance-plugins.exe
-dist/
+.DS_Store
+Thumbs.db

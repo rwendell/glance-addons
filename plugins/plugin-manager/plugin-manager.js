@@ -1,40 +1,21 @@
 /*
  * Glance Plugin Manager
  *
- * Local mode (default): reads plugins.jsonc + plugin-lock.json from the assets
- * directory and loads installed plugins from .plugins/. Version selection and
- * plugin downloads belong to the glance-plugins updater.
+ * Browser-only manager. Reads plugins.json, resolves versions, loads plugins
+ * from jsDelivr, and keeps a runtime lock in localStorage.
  *
- *   assets/.plugins/plugin-manager/plugin-manager.js
- *   assets/plugins.jsonc
- *   assets/plugin-lock.json
- *   assets/.plugins/<name>/<name>.js
+ * Local plugins live in assets/plugins/<name>/<name>.js and take precedence
+ * over remote plugins.
  *
- *   <script src="/assets/.plugins/plugin-manager/plugin-manager.js"></script>
- *
- * Remote mode: load plugins from GitHub or any URL directly.
- *
- *   <script src="/assets/.plugins/plugin-manager/plugin-manager.js" data-config='{
+ * Config:
+ *   {
  *     "plugins": [
- *       {"repo": "rwendell/glance-plugins", "name": "search-enhanced",
- *        "config": {"suggestions": true}}
+ *       { "name": "theme-switcher", "version": false, "config": {} }
  *     ]
- *   }'></script>
+ *   }
  *
- * Or from JavaScript:
- *
- *   GlancePlugins.setup({
- *     plugins: [
- *       {"repo": "rwendell/glance-plugins", "name": "search-enhanced",
- *        "config": {"suggestions": true}}
- *     ]
- *   });
- *
- * Plugin contract: plugins register themselves with
- *
- *   window.GlancePlugins.register("name", function setup(config) { ... });
- *
- * and skip automatic setup while `GlancePlugins._loading` is true.
+ * Version values follow lazy.nvim semantics:
+ *   false, "*", "^1.2.3", "~1.2.3", "1.2.x", ">=1.2.3", "1.2.3"
  */
 (function () {
     "use strict";
@@ -43,375 +24,21 @@
         return;
     }
 
-    const VERSION = "1.1.0";
-    const DEFAULT_REF = "main";
-    const MANIFEST_NAME = "glance-plugins.json";
-    const loadedScripts = new Set();
-    const scriptPromises = new Map();
-    const stylesheetPromises = new Map();
-    const manifestCache = new Map();
-    let setupQueue = Promise.resolve();
-
-    function parseJsonc(text) {
-        let withoutComments = "";
-        let inString = false;
-        let escaped = false;
-        let index = 0;
-
-        while (index < text.length) {
-            const char = text[index];
-            const next = text[index + 1];
-
-            if (inString) {
-                withoutComments += char;
-
-                if (escaped) {
-                    escaped = false;
-                } else if (char === "\\") {
-                    escaped = true;
-                } else if (char === '"') {
-                    inString = false;
-                }
-
-                index++;
-                continue;
-            }
-
-            if (char === '"') {
-                inString = true;
-                withoutComments += char;
-                index++;
-                continue;
-            }
-
-            if (char === "/" && next === "/") {
-                while (index < text.length && text[index] !== "\n") {
-                    index++;
-                }
-
-                continue;
-            }
-
-            if (char === "/" && next === "*") {
-                index += 2;
-
-                while (
-                    index < text.length &&
-                    !(text[index] === "*" && text[index + 1] === "/")
-                ) {
-                    index++;
-                }
-
-                index += 2;
-                continue;
-            }
-
-            withoutComments += char;
-            index++;
-        }
-
-        let withoutTrailingCommas = "";
-        inString = false;
-        escaped = false;
-
-        for (let i = 0; i < withoutComments.length; i++) {
-            const char = withoutComments[i];
-
-            if (inString) {
-                withoutTrailingCommas += char;
-
-                if (escaped) {
-                    escaped = false;
-                } else if (char === "\\") {
-                    escaped = true;
-                } else if (char === '"') {
-                    inString = false;
-                }
-
-                continue;
-            }
-
-            if (char === '"') {
-                inString = true;
-                withoutTrailingCommas += char;
-                continue;
-            }
-
-            if (char === ",") {
-                let lookahead = i + 1;
-
-                while (
-                    lookahead < withoutComments.length &&
-                    /\s/.test(withoutComments[lookahead])
-                ) {
-                    lookahead++;
-                }
-
-                if (
-                    withoutComments[lookahead] === "}" ||
-                    withoutComments[lookahead] === "]"
-                ) {
-                    continue;
-                }
-            }
-
-            withoutTrailingCommas += char;
-        }
-
-        return JSON.parse(withoutTrailingCommas);
-    }
-
-    function normalizeSpec(rawSpec) {
-        if (typeof rawSpec === "string") {
-            const hashIndex = rawSpec.indexOf("#");
-
-            if (hashIndex === -1) {
-                throw new Error(
-                    "String plugin specs need a plugin name, e.g. owner/repo#plugin"
-                );
-            }
-
-            const repoPart = rawSpec.slice(0, hashIndex);
-            const name = rawSpec.slice(hashIndex + 1);
-            const atIndex = repoPart.lastIndexOf("@");
-
-            if (atIndex > 0) {
-                return {
-                    repo: repoPart.slice(0, atIndex),
-                    ref: repoPart.slice(atIndex + 1),
-                    name,
-                };
-            }
-
-            return { repo: repoPart, name };
-        }
-
-        if (!rawSpec || typeof rawSpec !== "object") {
-            throw new Error("Invalid plugin spec");
-        }
-
-        return Object.assign({ ref: DEFAULT_REF }, rawSpec);
-    }
-
-    function repoBase(spec) {
-        if (spec.base) {
-            return new URL(spec.base, document.baseURI).href.replace(/\/?$/, "/");
-        }
-
-        const repo = String(spec.repo || "").replace(/^\/+|\/+$/g, "");
-        const ref = spec.ref || DEFAULT_REF;
-
-        if (!repo) {
-            throw new Error("Plugin spec needs a repo, base, or url");
-        }
-
-        return `https://cdn.jsdelivr.net/gh/${repo}@${ref}/`;
-    }
-
-    async function readJson(url) {
-        const response = await fetch(url, { cache: "no-cache" });
-
-        if (!response.ok) {
-            return null;
-        }
-
-        return response.json();
-    }
-
-    async function readJsonc(url) {
-        const response = await fetch(url, { cache: "no-cache" });
-
-        if (!response.ok) {
-            return null;
-        }
-
-        return parseJsonc(await response.text());
-    }
-
-    async function readManifest(url) {
-        if (manifestCache.has(url)) {
-            return manifestCache.get(url);
-        }
-
-        let manifest = null;
-
-        try {
-            manifest = await readJson(url);
-        } catch {
-            // A manifest is optional. Fall back to {name}/{name}.js below.
-        }
-
-        manifestCache.set(url, manifest);
-        return manifest;
-    }
-
-    async function resolveEntry(spec) {
-        if (spec.url) {
-            return new URL(spec.url, document.baseURI).href;
-        }
-
-        if (!spec.name) {
-            throw new Error("Plugin spec needs a name or url");
-        }
-
-        const base = repoBase(spec);
-        const manifestUrl = new URL(spec.manifest || MANIFEST_NAME, base).href;
-        const manifest = await readManifest(manifestUrl);
-        const info = manifest && manifest.plugins && manifest.plugins[spec.name];
-
-        if (spec.entry) {
-            return new URL(spec.entry, base).href;
-        }
-
-        if (typeof info === "string") {
-            return new URL(info, base).href;
-        }
-
-        if (info && info.entry) {
-            return new URL(info.entry, base).href;
-        }
-
-        return new URL(`plugins/${spec.name}/${spec.name}.js`, base).href;
-    }
-
-    function loadScript(url) {
-        if (loadedScripts.has(url)) {
-            return Promise.resolve();
-        }
-
-        if (scriptPromises.has(url)) {
-            return scriptPromises.get(url);
-        }
-
-        const promise = new Promise((resolve, reject) => {
-            const script = document.createElement("script");
-            script.src = url;
-            script.async = true;
-            script.onload = () => {
-                loadedScripts.add(url);
-                resolve();
-            };
-            script.onerror = () => {
-                scriptPromises.delete(url);
-                reject(new Error(`Failed to load script: ${url}`));
-            };
-            document.head.appendChild(script);
-        });
-
-        scriptPromises.set(url, promise);
-        return promise;
-    }
-
-    function loadStylesheet(url) {
-        if (stylesheetPromises.has(url)) {
-            return stylesheetPromises.get(url);
-        }
-
-        const existing = Array.from(
-            document.querySelectorAll('link[rel="stylesheet"]')
-        ).find((link) => link.href === url);
-
-        if (existing) {
-            return Promise.resolve();
-        }
-
-        const promise = new Promise((resolve, reject) => {
-            const link = document.createElement("link");
-            link.rel = "stylesheet";
-            link.href = url;
-            link.onload = resolve;
-            link.onerror = () => {
-                stylesheetPromises.delete(url);
-                reject(new Error(`Failed to load stylesheet: ${url}`));
-            };
-            document.head.appendChild(link);
-        });
-
-        stylesheetPromises.set(url, promise);
-        return promise;
-    }
-
-    function findRegisteredName(before) {
-        const added = Object.keys(registry._plugins).filter(
-            (name) => !before.has(name)
-        );
-
-        if (added.length === 1) {
-            return added[0];
-        }
-
-        if (added.length === 0) {
-            throw new Error("Plugin did not register itself");
-        }
-
-        throw new Error(
-            `Plugin registered multiple names (${added.join(", ")}); specify a name`
-        );
-    }
-
-    function versionedUrl(url, version) {
-        if (!version) {
-            return url;
-        }
-
-        const parsed = new URL(url, document.baseURI);
-        parsed.searchParams.set("v", version);
-        return parsed.href;
-    }
-
-    function localSpecs(config, lock, base) {
-        const entries = Array.isArray(config.plugins) ? config.plugins : [];
-        const lockedPlugins = (lock && lock.plugins) || {};
-
-        return entries.map((entry) => {
-            const name = entry.name;
-
-            if (!name) {
-                throw new Error("Each entry in plugins.jsonc needs a name");
-            }
-
-            const lockEntry = lockedPlugins[name] || {};
-
-            if (!lockEntry.path) {
-                console.warn(
-                    `[GlancePlugins] ${name} has no lock entry. ` +
-                        "Run the updater to generate plugin-lock.json."
-                );
-            }
-
-            const localPath =
-                entry.path || lockEntry.path || `.plugins/${name}/${name}.js`;
-            const fallback =
-                lockEntry.repo && lockEntry.entry
-                    ? `https://cdn.jsdelivr.net/gh/${lockEntry.repo}@${
-                          lockEntry.ref || DEFAULT_REF
-                      }/${lockEntry.entry}`
-                    : null;
-            const configuredStyles = entry.styles ?? lockEntry.styles ?? [];
-            const localUrl = new URL(localPath, base).href;
-            const cacheKey = lockEntry.commit
-                ? lockEntry.commit.slice(0, 12)
-                : lockEntry.ref || lockEntry.version || "";
-
-            return {
-                name,
-                version: cacheKey,
-                lockVersion: lockEntry.version || "",
-                url: entry.url || versionedUrl(localUrl, cacheKey),
-                fallback,
-                styles: configuredStyles.map((style) =>
-                    new URL(style, base).href
-                ),
-                config: entry.config || {},
-                enabled: entry.enabled !== false,
-            };
-        });
-    }
+    const script = document.currentScript;
+    const base = script
+        ? new URL(".", script.src)
+        : new URL("./", document.baseURI);
+    const configUrl = new URL("plugins.json", base);
+    const lockKey = "glance-plugin-lock-v1";
+    const defaultRepo = "rwendell/glance-plugins";
+    const latestTtl = 5 * 60 * 1000;
+    const tagsTtl = 60 * 60 * 1000;
+    const branchTtl = 24 * 60 * 60 * 1000;
+    const pollMs = 10 * 1000;
 
     const registry = {
         __manager: true,
-        version: VERSION,
-        assetsBase: null,
+        version: "2.0.0",
         _loading: false,
         _plugins: Object.create(null),
 
@@ -432,201 +59,715 @@
             return setup && setup.version ? setup.version : null;
         },
 
-        setup(options) {
-            const normalized = Array.isArray(options)
-                ? { plugins: options }
-                : options || {};
-
-            setupQueue = setupQueue.then(async () => {
-                const specs = Array.isArray(normalized.plugins)
-                    ? normalized.plugins
-                    : [];
-
-                this._loading = true;
-
-                try {
-                    for (const rawSpec of specs) {
-                        try {
-                            await this.load(rawSpec);
-                        } catch (error) {
-                            console.error(
-                                "[GlancePlugins] Failed to load plugin",
-                                rawSpec,
-                                error
-                            );
-                        }
-                    }
-                } finally {
-                    this._loading = false;
-                }
-            });
-
-            return setupQueue;
+        getLock() {
+            return readLock();
         },
 
-        use(spec) {
-            return this.setup({ plugins: [spec] });
-        },
-
-        async load(rawSpec) {
-            const wasLoading = this._loading;
-            this._loading = true;
-
+        refresh() {
             try {
-                const spec = normalizeSpec(rawSpec);
-
-                if (spec.enabled === false) {
-                    return;
-                }
-
-                if (
-                    (!spec.styles || spec.styles.length === 0) &&
-                    spec.config &&
-                    typeof spec.config.colorscheme === "string" &&
-                    this.assetsBase
-                ) {
-                    const colorscheme = spec.config.colorscheme.trim();
-
-                    if (/^[a-z0-9][a-z0-9_-]*$/i.test(colorscheme)) {
-                        spec.styles = [
-                            new URL(
-                                `themes/${colorscheme}.css`,
-                                this.assetsBase
-                            ).href,
-                        ];
-                    }
-                }
-
-                const entry = await resolveEntry(spec);
-
-                if (loadedScripts.has(entry)) {
-                    console.warn(`[GlancePlugins] Already loaded: ${entry}`);
-                    return;
-                }
-
-                const before = new Set(Object.keys(this._plugins));
-
-                if (spec.name && this._plugins[spec.name]) {
-                    console.warn(
-                        `[GlancePlugins] ${spec.name} is already loaded; skipping`
-                    );
-                    return;
-                }
-
-                if (spec.styles) {
-                    for (const style of spec.styles) {
-                        await loadStylesheet(new URL(style, entry).href);
-                    }
-                }
-
-                try {
-                    await loadScript(entry);
-                } catch (error) {
-                    if (!spec.fallback || spec.fallback === entry) {
-                        throw error;
-                    }
-
-                    console.warn(
-                        `[GlancePlugins] Falling back to ${spec.fallback}`,
-                        error
-                    );
-                    await loadScript(spec.fallback);
-                }
-
-                const name = spec.name || findRegisteredName(before);
-                const setup = this._plugins[name];
-
-                if (typeof setup !== "function") {
-                    throw new Error(
-                        `Plugin ${name} did not register a setup function`
-                    );
-                }
-
-                const config =
-                    typeof spec.config === "function" ? spec.config() : spec.config;
-
-                setup(config || {});
-
-                if (
-                    spec.lockVersion &&
-                    setup.version &&
-                    spec.lockVersion !== setup.version
-                ) {
-                    console.warn(
-                        `[GlancePlugins] ${name}: lock version ${spec.lockVersion} ` +
-                            `does not match plugin version ${setup.version}`
-                    );
-                }
-            } finally {
-                this._loading = wasLoading;
+                localStorage.removeItem(lockKey);
+            } catch {
+                // localStorage can be unavailable in private browsing modes.
             }
+
+            window.location.reload();
         },
     };
 
     window.GlancePlugins = registry;
 
-    const script = document.currentScript;
-
-    if (!script) {
-        return;
+    function emptyLock() {
+        return { version: 1, updatedAt: 0, repos: {}, plugins: {} };
     }
 
-    const scriptBase = new URL(".", script.src);
-    const defaultAssetsBase = scriptBase.pathname.includes(
-        "/.plugins/plugin-manager/"
-    )
-        ? new URL("../../", scriptBase)
-        : scriptBase;
-
-    registry.assetsBase = defaultAssetsBase.href;
-
-    if (script.dataset.config) {
+    function readLock() {
         try {
-            registry.setup(JSON.parse(script.dataset.config));
-        } catch (error) {
-            console.error("[GlancePlugins] Invalid data-config JSON:", error);
+            const parsed = JSON.parse(localStorage.getItem(lockKey));
+
+            if (parsed && typeof parsed === "object") {
+                parsed.repos = parsed.repos || {};
+                parsed.plugins = parsed.plugins || {};
+                return parsed;
+            }
+        } catch {
+            // Ignore malformed cached lock.
         }
 
-        return;
+        return emptyLock();
     }
 
-    (async () => {
-        const configFile = script.dataset.configFile || "plugins.jsonc";
-        const lockFile = script.dataset.lockFile || "plugin-lock.json";
-        const candidates = [defaultAssetsBase, scriptBase].filter(
-            (value, index, all) =>
-                all.findIndex((candidate) => candidate.href === value.href) ===
-                index
-        );
+    function writeLock(lock) {
+        try {
+            localStorage.setItem(lockKey, JSON.stringify(lock));
+        } catch {
+            // localStorage can be unavailable in private browsing modes.
+        }
+    }
 
-        for (const base of candidates) {
+    async function fetchJSON(url, options) {
+        let lastError = null;
+
+        for (let attempt = 0; attempt < 2; attempt++) {
             try {
-                const config = await readJsonc(new URL(configFile, base));
+                const res = await fetch(url, options);
 
-                if (!config) {
+                if (!res.ok) {
+                    throw new Error(`${url}: ${res.status} ${res.statusText}`);
+                }
+
+                return await res.json();
+            } catch (error) {
+                lastError = error;
+
+                if (error instanceof TypeError && attempt === 0) {
+                    await new Promise((resolve) => setTimeout(resolve, 500));
                     continue;
                 }
 
-                let lock = null;
-
-                try {
-                    lock = await readJson(new URL(lockFile, base));
-                } catch {
-                    // The lock file is optional; paths fall back to .plugins/.
-                }
-
-                registry.assetsBase = base.href;
-                await registry.setup({
-                    plugins: localSpecs(config, lock, base),
-                });
-                return;
-            } catch (error) {
-                console.error(
-                    "[GlancePlugins] Failed to load plugins.jsonc:",
-                    error
-                );
-                return;
+                throw error;
             }
         }
-    })();
+
+        throw lastError;
+    }
+
+    function repoParts(repo) {
+        const parts = String(repo || "").split("/");
+
+        if (
+            parts.length !== 2 ||
+            !parts[0] ||
+            !parts[1] ||
+            parts[0] === "." ||
+            parts[0] === ".." ||
+            parts[1] === "." ||
+            parts[1] === ".."
+        ) {
+            throw new Error(`Invalid repo: ${repo}`);
+        }
+
+        return parts;
+    }
+
+    async function defaultBranch(repo, lock) {
+        const cached = lock.repos[repo];
+
+        if (cached && cached.branch && Date.now() - cached.branchAt < branchTtl) {
+            return cached.branch;
+        }
+
+        try {
+            const info = await fetchJSON(
+                `https://api.github.com/repos/${repo}`,
+                {
+                    headers: { Accept: "application/vnd.github+json" },
+                    cache: "no-store",
+                }
+            );
+
+            const branch = info.default_branch || "main";
+            lock.repos[repo] = {
+                ...(cached || {}),
+                branch,
+                branchAt: Date.now(),
+            };
+            return branch;
+        } catch (error) {
+            if (cached && cached.branch) {
+                return cached.branch;
+            }
+            throw error;
+        }
+    }
+
+    async function latestCommit(repo, branch, lock) {
+        const cached = lock.repos[repo];
+
+        if (
+            cached &&
+            cached.latestCommit &&
+            Date.now() - cached.latestAt < latestTtl
+        ) {
+            return cached.latestCommit;
+        }
+
+        const commit = await fetchJSON(
+            `https://api.github.com/repos/${repo}/commits/${encodeURIComponent(branch)}`,
+            {
+                headers: { Accept: "application/vnd.github+json" },
+                cache: "no-store",
+            }
+        );
+
+        if (!commit || !commit.sha) {
+            throw new Error(`No commit returned for ${repo}@${branch}`);
+        }
+
+        lock.repos[repo] = {
+            ...(cached || {}),
+            latestCommit: commit.sha,
+            latestAt: Date.now(),
+        };
+
+        return commit.sha;
+    }
+
+    async function tagVersions(repo, lock) {
+        const cached = lock.repos[repo];
+
+        if (cached && cached.tags && Date.now() - cached.tagsAt < tagsTtl) {
+            return cached.tags;
+        }
+
+        try {
+            const data = await fetchJSON(
+                `https://data.jsdelivr.com/v1/packages/gh/${repo}`
+            );
+
+            const versions = (data.versions || [])
+                .map((item) => item.version)
+                .filter((item) => typeof item === "string");
+
+            lock.repos[repo] = {
+                ...(cached || {}),
+                tags: versions,
+                tagsAt: Date.now(),
+            };
+            return versions;
+        } catch (error) {
+            if (cached && cached.tags) {
+                return cached.tags;
+            }
+            throw error;
+        }
+    }
+
+    async function manifestAt(repo, ref) {
+        try {
+            return await fetchJSON(
+                `https://cdn.jsdelivr.net/gh/${repo}@${encodeURIComponent(ref)}/glance-plugins.json`
+            );
+        } catch {
+            return fetchJSON(
+                `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(ref)}/glance-plugins.json`
+            );
+        }
+    }
+
+    function versionSpec(raw) {
+        if (raw === undefined || raw === null || raw === false) {
+            return { pinned: false, exact: false };
+        }
+
+        if (typeof raw === "string") {
+            const value = raw.trim();
+
+            if (!value || value.toLowerCase() === "false") {
+                return { pinned: false, exact: false };
+            }
+
+            return {
+                pinned: true,
+                exact: Boolean(parseSemver(value.replace(/^v/i, ""))),
+                value,
+            };
+        }
+
+        throw new Error("version must be a semver range or false");
+    }
+
+    function parseSemver(value) {
+        const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(
+            String(value).trim()
+        );
+
+        if (!match) {
+            return null;
+        }
+
+        return {
+            major: Number(match[1]),
+            minor: Number(match[2]),
+            patch: Number(match[3]),
+            prerelease: match[4] || "",
+        };
+    }
+
+    function compareSemver(a, b) {
+        if (a.major !== b.major) return a.major - b.major;
+        if (a.minor !== b.minor) return a.minor - b.minor;
+        if (a.patch !== b.patch) return a.patch - b.patch;
+        if (a.prerelease === b.prerelease) return 0;
+        if (!a.prerelease) return 1;
+        if (!b.prerelease) return -1;
+        return a.prerelease < b.prerelease ? -1 : 1;
+    }
+
+    function upperCaret(version) {
+        if (version.major > 0) {
+            return { major: version.major + 1, minor: 0, patch: 0, prerelease: "" };
+        }
+        if (version.minor > 0) {
+            return { major: 0, minor: version.minor + 1, patch: 0, prerelease: "" };
+        }
+        return { major: 0, minor: 0, patch: version.patch + 1, prerelease: "" };
+    }
+
+    function upperTilde(version) {
+        return {
+            major: version.major,
+            minor: version.minor + 1,
+            patch: 0,
+            prerelease: "",
+        };
+    }
+
+    function satisfies(version, range) {
+        const value = String(range).trim();
+
+        if (!value || value === "*") {
+            return true;
+        }
+
+        if (value.includes("||")) {
+            return value.split("||").some((part) => satisfies(version, part));
+        }
+
+        return value
+            .split(/\s+/)
+            .filter(Boolean)
+            .every((part) => satisfiesOne(version, part));
+    }
+
+    function satisfiesOne(version, range) {
+        if (range === "*") {
+            return true;
+        }
+
+        if (range.endsWith(".x") || range.endsWith(".*")) {
+            const parts = range.split(".");
+
+            if (version.major !== Number(parts[0])) {
+                return false;
+            }
+
+            if (parts[1] === "x" || parts[1] === "*") {
+                return true;
+            }
+
+            return version.minor === Number(parts[1]);
+        }
+
+        const match = /^(>=|<=|>|<|\^|~)?\s*v?(.+)$/.exec(range);
+
+        if (!match) {
+            return false;
+        }
+
+        const operator = match[1] || "";
+        const target = parseSemver(match[2]);
+
+        if (!target) {
+            return false;
+        }
+
+        const cmp = compareSemver(version, target);
+
+        switch (operator) {
+            case ">":
+                return cmp > 0;
+            case ">=":
+                return cmp >= 0;
+            case "<":
+                return cmp < 0;
+            case "<=":
+                return cmp <= 0;
+            case "^":
+                return cmp >= 0 && compareSemver(version, upperCaret(target)) < 0;
+            case "~":
+                return cmp >= 0 && compareSemver(version, upperTilde(target)) < 0;
+            default:
+                return cmp === 0;
+        }
+    }
+
+    function selectTag(versions, plugin, range) {
+        const prefix = `${plugin.toLowerCase()}-v`;
+        const prefixed = [];
+        const global = [];
+
+        for (const name of versions) {
+            const lower = name.toLowerCase();
+            let parsed = null;
+
+            if (lower.startsWith(prefix)) {
+                const version = parseSemver(name.slice(prefix.length));
+                if (version && !version.prerelease) {
+                    prefixed.push({ name, version });
+                }
+                continue;
+            }
+
+            parsed = parseSemver(name.replace(/^v/i, ""));
+            if (parsed && !parsed.prerelease) {
+                global.push({ name, version: parsed });
+            }
+        }
+
+        const candidates = prefixed.length > 0 ? prefixed : global;
+
+        if (candidates.length === 0) {
+            throw new Error(`No semver tags found for ${plugin}`);
+        }
+
+        candidates.sort((a, b) => compareSemver(b.version, a.version));
+
+        const match = candidates.find((candidate) =>
+            satisfies(candidate.version, range)
+        );
+
+        if (!match) {
+            throw new Error(
+                `No tag for ${plugin} matches ${range}; available: ${candidates
+                    .slice(0, 10)
+                    .map((candidate) => candidate.name)
+                    .join(", ")}`
+            );
+        }
+
+        return match;
+    }
+
+    async function resolveRemote(name, spec, lock) {
+        const repo = String(spec.plugin || defaultRepo).trim();
+        repoParts(repo);
+
+        const requested = versionSpec(spec.version);
+        const requestedKey = requested.pinned ? requested.value : "false";
+        const cached = lock.plugins[name];
+
+        if (
+            cached &&
+            cached.repo === repo &&
+            cached.requested === requestedKey &&
+            cached.kind
+        ) {
+            const age = Date.now() - (cached.resolvedAt || 0);
+
+            if (
+                (cached.kind === "latest" && age < latestTtl) ||
+                (cached.kind === "tag" && requested.exact) ||
+                (cached.kind === "tag" && age < tagsTtl)
+            ) {
+                return cached;
+            }
+        }
+
+        try {
+            let ref;
+            let kind;
+            let tagVersion = "";
+
+            if (requested.pinned) {
+                const versions = await tagVersions(repo, lock);
+                const tag = selectTag(versions, name, requested.value);
+                ref = tag.name;
+                kind = "tag";
+                tagVersion = `${tag.version.major}.${tag.version.minor}.${tag.version.patch}`;
+            } else {
+                const branch = await defaultBranch(repo, lock);
+                ref = await latestCommit(repo, branch, lock);
+                kind = "latest";
+            }
+
+            const manifest = await manifestAt(repo, ref);
+            const info = manifest.plugins && manifest.plugins[name];
+
+            if (!info || !info.entry) {
+                throw new Error(`Manifest has no plugin ${name} at ${ref}`);
+            }
+
+            const entry = {
+                requested: requestedKey,
+                version: info.version || tagVersion,
+                repo,
+                ref,
+                entry: info.entry,
+                kind,
+                resolvedAt: Date.now(),
+            };
+
+            lock.plugins[name] = entry;
+            return entry;
+        } catch (error) {
+            if (cached && cached.repo === repo && cached.entry) {
+                console.warn(
+                    `[GlancePlugins] ${name}: using cached ${cached.ref}`,
+                    error
+                );
+                return cached;
+            }
+
+            throw error;
+        }
+    }
+
+    async function localPluginUrl(name, spec) {
+        if (spec.url) {
+            return new URL(spec.url, base).href;
+        }
+
+        const path = spec.path || `plugins/${name}/${name}.js`;
+        const url = new URL(path, base).href;
+
+        try {
+            const res = await fetch(url, { method: "HEAD", cache: "no-cache" });
+            if (res.ok) {
+                return url;
+            }
+        } catch {
+            // No local plugin.
+        }
+
+        return null;
+    }
+
+    function remotePluginUrl(entry) {
+        return `https://cdn.jsdelivr.net/gh/${entry.repo}@${encodeURIComponent(
+            entry.ref
+        )}/${entry.entry}`;
+    }
+
+    const loadedStyles = new Set();
+
+    function loadStylesheet(url) {
+        if (loadedStyles.has(url)) {
+            return Promise.resolve();
+        }
+
+        const existing = Array.from(
+            document.querySelectorAll('link[rel="stylesheet"]')
+        ).find((link) => link.href === url);
+
+        if (existing) {
+            loadedStyles.add(url);
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+            const link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = url;
+            link.onload = () => {
+                loadedStyles.add(url);
+                resolve();
+            };
+            link.onerror = () => reject(new Error(`Failed to load ${url}`));
+            document.head.appendChild(link);
+        });
+    }
+
+    const loadedScripts = new Set();
+
+    function loadScript(url) {
+        if (loadedScripts.has(url)) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = url;
+            script.async = true;
+            script.onload = () => {
+                loadedScripts.add(url);
+                resolve();
+            };
+            script.onerror = () => reject(new Error(`Failed to load ${url}`));
+            document.head.appendChild(script);
+        });
+    }
+
+    function startConfigPoll(initialText) {
+        let lastText = initialText;
+
+        window.setInterval(async () => {
+            if (document.hidden) {
+                return;
+            }
+
+            try {
+                const res = await fetch(configUrl, { cache: "no-cache" });
+                if (!res.ok) {
+                    return;
+                }
+
+                const text = await res.text();
+                if (text !== lastText) {
+                    lastText = text;
+                    window.location.reload();
+                }
+            } catch {
+                // Ignore transient config fetch errors.
+            }
+        }, pollMs);
+    }
+
+    async function main() {
+        const configRes = await fetch(configUrl, { cache: "no-cache" });
+
+        if (!configRes.ok) {
+            console.warn(
+                `[GlancePlugins] Could not load ${configUrl.pathname}: ${configRes.status}`
+            );
+            return;
+        }
+
+        const configText = await configRes.text();
+        let config;
+
+        try {
+            config = JSON.parse(configText);
+        } catch (error) {
+            console.error("[GlancePlugins] Invalid plugins.json:", error);
+            return;
+        }
+
+        const specs = Array.isArray(config.plugins) ? config.plugins : [];
+        const lock = readLock();
+        const plans = [];
+
+        for (const spec of specs) {
+            if (!spec || spec.enabled === false) {
+                continue;
+            }
+
+            const name = String(spec.name || "").trim();
+
+            if (!/^[a-z0-9][a-z0-9_-]*$/i.test(name)) {
+                console.error(`[GlancePlugins] Invalid plugin name: ${name}`);
+                continue;
+            }
+
+            const local = await localPluginUrl(name, spec);
+
+            if (local) {
+                plans.push({
+                    name,
+                    config: spec.config || {},
+                    spec,
+                    url: local,
+                    local: true,
+                });
+                continue;
+            }
+
+            try {
+                const entry = await resolveRemote(name, spec, lock);
+                plans.push({
+                    name,
+                    config: spec.config || {},
+                    spec,
+                    url: remotePluginUrl(entry),
+                    local: false,
+                    entry,
+                });
+            } catch (error) {
+                console.error(`[GlancePlugins] Failed to resolve ${name}:`, error);
+            }
+        }
+
+        for (const plan of plans) {
+            const colorscheme = plan.config.colorscheme;
+
+            if (
+                typeof colorscheme === "string" &&
+                /^[a-z0-9][a-z0-9_-]*$/i.test(colorscheme)
+            ) {
+                try {
+                    await loadStylesheet(
+                        new URL(`themes/${colorscheme}.css`, base).href
+                    );
+                } catch (error) {
+                    console.warn(
+                        `[GlancePlugins] Could not load theme CSS for ${plan.name}`,
+                        error
+                    );
+                }
+            }
+
+            if (Array.isArray(plan.spec.styles)) {
+                for (const style of plan.spec.styles) {
+                    try {
+                        await loadStylesheet(new URL(style, base).href);
+                    } catch (error) {
+                        console.warn(
+                            `[GlancePlugins] Could not load style for ${plan.name}`,
+                            error
+                        );
+                    }
+                }
+            }
+        }
+
+        registry._loading = true;
+
+        for (const plan of plans) {
+            try {
+                await loadScript(plan.url);
+            } catch (error) {
+                plan.failed = true;
+                console.error(`[GlancePlugins] Failed to load ${plan.name}:`, error);
+            }
+        }
+
+        registry._loading = false;
+
+        for (const plan of plans) {
+            if (plan.failed) {
+                continue;
+            }
+
+            const setup = registry.get(plan.name);
+
+            if (typeof setup !== "function") {
+                console.error(`[GlancePlugins] ${plan.name} did not register`);
+                continue;
+            }
+
+            try {
+                setup(plan.config);
+            } catch (error) {
+                console.error(`[GlancePlugins] ${plan.name} setup failed:`, error);
+            }
+
+            if (plan.local) {
+                lock.plugins[plan.name] = {
+                    local: true,
+                    path: new URL(plan.url).pathname,
+                    version: setup.version || "",
+                    resolvedAt: Date.now(),
+                };
+                continue;
+            }
+
+            if (
+                plan.entry.version &&
+                setup.version &&
+                plan.entry.version !== setup.version
+            ) {
+                console.warn(
+                    `[GlancePlugins] ${plan.name}: resolved ${plan.entry.version}, ` +
+                        `plugin reports ${setup.version}`
+                );
+            }
+        }
+
+        lock.updatedAt = Date.now();
+        writeLock(lock);
+        startConfigPoll(configText);
+    }
+
+    main().catch((error) => {
+        console.error("[GlancePlugins] Manager failed:", error);
+    });
 })();

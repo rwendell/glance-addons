@@ -17,12 +17,12 @@ A URL query shows two rows: **Open** and **Search for "…"**.
 
 ### Plugin manager
 
-1. Copy [`search-enhanced.js`](search-enhanced.js) to `assets/.plugins/search-enhanced/search-enhanced.js`.
-2. Add the plugin to `assets/plugins.jsonc`:
+Add an entry to `assets/plugins.json`:
 
-```jsonc
+```json
 {
   "name": "search-enhanced",
+  "plugin": "rwendell/glance-plugins",
   "version": false,
   "config": {
     "directUrls": true,
@@ -32,7 +32,9 @@ A URL query shows two rows: **Open** and **Search for "…"**.
 }
 ```
 
-3. Run the updater. It writes `assets/plugin-lock.json`. See [Plugin Manager](../plugin-manager/README.md).
+For a local copy, place [`search-enhanced.js`](search-enhanced.js) at `assets/plugins/search-enhanced/search-enhanced.js` and omit `plugin` and `version`.
+
+See [Plugin Manager](../plugin-manager/README.md).
 
 ### Standalone
 

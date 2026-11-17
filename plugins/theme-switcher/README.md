@@ -40,13 +40,13 @@ See [`examples/kissa.css`](examples/kissa.css) for a complete palette.
 
 ## Install with the Plugin Manager
 
-1. Copy [`theme-switcher.js`](theme-switcher.js) to `assets/.plugins/theme-switcher/theme-switcher.js`.
-2. Copy your colorscheme to `assets/themes/kissa.css`.
-3. Add the plugin to `assets/plugins.jsonc`:
+1. Copy your colorscheme to `assets/themes/kissa.css`.
+2. Add the plugin to `assets/plugins.json`:
 
-```jsonc
+```json
 {
   "name": "theme-switcher",
+  "plugin": "rwendell/glance-plugins",
   "version": false,
   "config": {
     "colorscheme": "kissa"
@@ -54,16 +54,17 @@ See [`examples/kissa.css`](examples/kissa.css) for a complete palette.
 }
 ```
 
-4. Run the updater. It writes `assets/plugin-lock.json`. See [Plugin Manager](../plugin-manager/README.md).
-5. Keep only the manager script in `glance.yml`:
+3. Keep only the manager script in `glance.yml`:
 
 ```yaml
 document:
   head: |
-    <script src="/assets/.plugins/plugin-manager/plugin-manager.js"></script>
+    <script src="/assets/plugin-manager.js"></script>
 ```
 
-The plugin entry needs only `colorscheme`. The manager loads `themes/kissa.css`. `glance.yml` has no `theme.custom-css-file` entry.
+For a local copy, place [`theme-switcher.js`](theme-switcher.js) at `assets/plugins/theme-switcher/theme-switcher.js` and omit `plugin` and `version`.
+
+The manager loads `themes/kissa.css`. `glance.yml` has no `theme.custom-css-file` entry.
 
 ## Standalone install
 
