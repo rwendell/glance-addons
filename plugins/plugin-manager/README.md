@@ -91,15 +91,7 @@ Plugins load in array order.
 
 ## Versions
 
-| Value | Result |
-| ----- | ------ |
-| `false` | Latest commit on the default branch. |
-| `"*"` | Latest stable tag. |
-| `"^2.1.0"` | Latest compatible tag. |
-| `"~2.1.0"` | Latest patch tag. |
-| `"2.1.x"` | Latest tag starting with `2.1`. |
-| `">=2.1.0"` | Latest tag at or above `2.1.0`. |
-| `"2.1.4"` | Exact tag. |
+`version` accepts lazy.nvim-style semver ranges and `false` for the latest commit. See [lazy.nvim versioning](https://lazy.folke.io/spec/versioning).
 
 Plugin tags use `<name>-v<semver>`, for example `theme-switcher-v2.1.4`.
 
