@@ -11,9 +11,9 @@
       "description": "URL-aware search bar with Google suggestions."
     },
     "theme-switcher": {
-      "version": "2.1.0",
+      "version": "2.1.1",
       "entry": "plugins/theme-switcher/theme-switcher.js",
-      "description": "Automatic light/dark switching for a colorscheme."
+      "description": "Light/dark/system switching for a colorscheme."
     }
   }
 }

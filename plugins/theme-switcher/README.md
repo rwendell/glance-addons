@@ -1,8 +1,8 @@
 # Theme Switcher for Glance
 
-Switches a colorscheme's light and dark palettes with the OS preference, or with a manual System/Light/Dark control in the header.
+Switches a colorscheme's light and dark palettes with the OS preference, or with a manual Light/Dark/System control in the header.
 
-Version 2.1.0.
+Version 2.1.1.
 
 ## Requirements
 
@@ -80,11 +80,11 @@ You can use `theme.custom-css-file: /assets/themes/kissa.css` in place of the `<
 
 ## Controls
 
-The plugin adds a three-button control to the header and the mobile navigation:
+The plugin adds one button to the header and the mobile navigation. Click it to cycle:
 
-- **System** follows `prefers-color-scheme`.
-- **Light** pins the light palette.
-- **Dark** pins the dark palette.
+**System → Light → Dark → System**
+
+The icon and tooltip show the current mode. **System** follows `prefers-color-scheme`; **Light** and **Dark** pin that palette.
 
 The plugin stores the selected mode in `localStorage` under `glance-theme-mode`.
 
@@ -107,7 +107,7 @@ GlanceThemeSwitcher.refresh();
 - The manager loads the theme CSS before the plugin's `setup()` runs.
 - Theme files resolve from the local `assets/themes/` directory, including remote plugin installs.
 - `window.GlanceThemeSwitcher.refresh()` reapplies the current mode.
-- The plugin replaces Glance's theme picker with the System/Light/Dark control.
+- The plugin replaces Glance's theme picker with the light/dark/system toggle.
 - Tested with Glance 0.8.8.
 
 ## License

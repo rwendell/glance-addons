@@ -2,7 +2,7 @@
  * Glance Theme Switcher
  *
  * Applies a colorscheme's light/dark palette and provides a manual
- * System/Light/Dark control in the header.
+ * light/dark/system toggle in the header.
  *
  * Config:
  *   { "colorscheme": "kissa" }
@@ -18,7 +18,7 @@
     "use strict";
 
     const NAME = "theme-switcher";
-    const VERSION = "2.1.0";
+    const VERSION = "2.1.1";
     const ATTRIBUTE = "data-glance-scheme";
     const STORAGE_KEY = "glance-theme-mode";
     const MODES = ["system", "light", "dark"];
@@ -26,11 +26,23 @@
     const DARK_SELECTOR = /data-glance-scheme\s*=\s*["']dark["']/;
 
     const ICON_SYSTEM =
-        '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>';
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+        '<path d="M12 2v2"></path>' +
+        '<path d="M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715"></path>' +
+        '<path d="M16 12a4 4 0 0 0-4-4"></path>' +
+        '<path d="m19 5-1.256 1.256"></path>' +
+        '<path d="M20 12h2"></path></svg>';
     const ICON_LIGHT =
         '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>';
     const ICON_DARK =
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>';
+
+    const MODE_LABELS = { system: "System", light: "Light", dark: "Dark" };
+    const MODE_ICONS = {
+        system: ICON_SYSTEM,
+        light: ICON_LIGHT,
+        dark: ICON_DARK,
+    };
 
     let initialized = false;
 
@@ -129,40 +141,30 @@
                 display: none !important;
             }
 
-            .gts-control {
+            .gts-toggle {
                 display: flex;
                 flex: none;
                 align-items: center;
-                gap: 0.2rem;
-                margin-left: 1rem;
-                padding: 0.2rem;
-                border-radius: calc(var(--border-radius) * 2);
-                background: var(--color-widget-background-highlight);
-            }
-
-            .gts-button {
-                display: flex;
-                align-items: center;
                 justify-content: center;
-                width: 2.8rem;
-                height: 2.8rem;
+                width: 3.2rem;
+                height: 3.2rem;
+                margin-left: 1rem;
                 padding: 0;
                 border: 0;
                 border-radius: var(--border-radius);
-                background: transparent;
-                color: var(--color-text-subdue);
+                background: var(--color-widget-background-highlight);
+                color: var(--color-text-base);
                 cursor: pointer;
             }
 
-            .gts-button:hover,
-            .gts-button[aria-pressed="true"] {
+            .gts-toggle:hover {
                 color: var(--color-text-highlight);
                 background: var(--color-widget-background);
             }
 
-            .gts-button svg {
-                width: 1.6rem;
-                height: 1.6rem;
+            .gts-toggle svg {
+                width: 1.8rem;
+                height: 1.8rem;
                 stroke: currentColor;
                 fill: none;
                 stroke-width: 1.8;
@@ -170,15 +172,16 @@
                 stroke-linejoin: round;
             }
 
-            .mobile-navigation .gts-control {
+            .mobile-navigation .gts-toggle {
+                width: 3.2rem;
+                height: 3.2rem;
                 margin-left: 0.5rem;
-                padding: 0;
                 background: transparent;
             }
 
-            .mobile-navigation .gts-button {
-                width: 2.4rem;
-                height: 2.4rem;
+            .mobile-navigation .gts-toggle:hover,
+            .mobile-navigation .gts-toggle:active {
+                background: var(--color-widget-background-highlight);
             }
         `;
 
@@ -230,10 +233,15 @@
         root.dataset.glanceColorscheme = colorscheme;
 
         function syncControls() {
-            for (const button of document.querySelectorAll(".gts-button")) {
+            const label = MODE_LABELS[mode];
+
+            for (const button of document.querySelectorAll(".gts-toggle")) {
+                button.dataset.mode = mode;
+                button.innerHTML = MODE_ICONS[mode];
+                button.title = `Color scheme: ${label} (click to change)`;
                 button.setAttribute(
-                    "aria-pressed",
-                    button.dataset.mode === mode ? "true" : "false"
+                    "aria-label",
+                    `Color scheme: ${label}. Activate to change.`
                 );
             }
         }
@@ -262,46 +270,31 @@
             apply();
         }
 
-        function createControl() {
-            const group = document.createElement("div");
-            group.className = "gts-control";
-            group.setAttribute("role", "group");
-            group.setAttribute("aria-label", "Color scheme");
+        function nextMode() {
+            return MODES[(MODES.indexOf(mode) + 1) % MODES.length];
+        }
 
-            const choices = [
-                ["system", "System", ICON_SYSTEM],
-                ["light", "Light", ICON_LIGHT],
-                ["dark", "Dark", ICON_DARK],
-            ];
-
-            for (const [value, label, icon] of choices) {
-                const button = document.createElement("button");
-                button.type = "button";
-                button.className = "gts-button";
-                button.dataset.mode = value;
-                button.title = label;
-                button.setAttribute("aria-label", `${label} color scheme`);
-                button.innerHTML = icon;
-                button.addEventListener("click", () => setMode(value));
-                group.appendChild(button);
-            }
-
-            return group;
+        function createToggle() {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "gts-toggle";
+            button.addEventListener("click", () => setMode(nextMode()));
+            return button;
         }
 
         function mountControls() {
             const header = document.querySelector(".header-container .header");
 
-            if (header && !header.querySelector(".gts-control")) {
-                header.appendChild(createControl());
+            if (header && !header.querySelector(".gts-toggle")) {
+                header.appendChild(createToggle());
             }
 
             const mobileIcons = document.querySelector(
                 ".mobile-navigation-icons"
             );
 
-            if (mobileIcons && !mobileIcons.querySelector(".gts-control")) {
-                mobileIcons.appendChild(createControl());
+            if (mobileIcons && !mobileIcons.querySelector(".gts-toggle")) {
+                mobileIcons.appendChild(createToggle());
             }
 
             syncControls();
