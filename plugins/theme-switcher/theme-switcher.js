@@ -18,7 +18,7 @@
     "use strict";
 
     const NAME = "theme-switcher";
-    const VERSION = "2.1.2";
+    const VERSION = "2.1.3";
     const ATTRIBUTE = "data-glance-scheme";
     const STORAGE_KEY = "glance-theme-mode";
     const MODES = ["system", "light", "dark"];
@@ -136,6 +136,19 @@
             html.gts-active .theme-picker,
             html.gts-active .mobile-navigation .theme-choices {
                 display: none !important;
+            }
+
+            .header {
+                position: relative;
+            }
+
+            .header > .gts-toggle {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                margin: 0;
+                z-index: 1;
             }
 
             .gts-toggle {

@@ -6,7 +6,7 @@ Plugins for [Glance](https://github.com/glanceapp/glance).
 | ------ | ------- | ----------- |
 | [Plugin Manager](plugins/plugin-manager/) | 1.0.0 | Required. Loads and configures the other plugins. |
 | [Enhanced Search](plugins/search-enhanced/) | 1.0.0 | Opens URLs from the search bar and shows Google suggestions. |
-| [Theme Switcher](plugins/theme-switcher/) | 2.1.2 | Switches a colorscheme's light and dark palettes. Adds a light/dark/system control to the header. |
+| [Theme Switcher](plugins/theme-switcher/) | 2.1.3 | Switches a colorscheme's light and dark palettes. Adds a light/dark/system control to the header. |
 
 ## Requirements
 
@@ -21,13 +21,13 @@ The plugin manager is the only plugin in `glance.yml`.
 Windows:
 
 ```bat
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.3/install/install.cmd | cmd
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.4/install/install.cmd | cmd
 ```
 
 Linux and macOS:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.3/install/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.4/install/install.sh | sh
 ```
 
 The installers write:
@@ -47,12 +47,12 @@ document:
 Use a different assets directory:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.3/install/install.sh | sh -s -- /path/to/assets
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.4/install/install.sh | sh -s -- /path/to/assets
 ```
 
 ```bat
 set "GLANCE_ASSETS=D:\path\to\assets"
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.3/install/install.cmd | cmd
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.4/install/install.cmd | cmd
 ```
 
 Manual install: copy [`plugins/plugin-manager/plugin-manager.js`](plugins/plugin-manager/plugin-manager.js) to `assets/.plugins/plugin-manager/plugin-manager.js` and add the script tag.
@@ -93,16 +93,16 @@ Add plugin entries to `assets/plugins.jsonc` and install metadata to `assets/plu
   "version": 1,
   "plugins": {
     "theme-switcher": {
-      "version": "2.1.2",
+      "version": "2.1.3",
       "repo": "rwendell/glance-plugins",
-      "ref": "v2.0.3",
+      "ref": "v2.0.4",
       "entry": "plugins/theme-switcher/theme-switcher.js",
       "path": ".plugins/theme-switcher/theme-switcher.js"
     },
     "search-enhanced": {
       "version": "1.0.0",
       "repo": "rwendell/glance-plugins",
-      "ref": "v2.0.3",
+      "ref": "v2.0.4",
       "entry": "plugins/search-enhanced/search-enhanced.js",
       "path": ".plugins/search-enhanced/search-enhanced.js"
     }
@@ -125,7 +125,7 @@ The [Plugin Manager docs](plugins/plugin-manager/README.md) list every `plugins.
 
 Each plugin has its own semantic version. The plugin source declares it as `setup.version`, [`glance-plugins.json`](glance-plugins.json) lists current versions, and `plugin-lock.json` records installed versions.
 
-Repository tags such as `v2.0.3` are distribution snapshots. They do not replace per-plugin versions.
+Repository tags such as `v2.0.4` are distribution snapshots. They do not replace per-plugin versions.
 
 The manager appends the installed version to local script URLs and logs a warning when the lock version differs from the plugin's `setup.version`.
 
