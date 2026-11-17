@@ -5,7 +5,7 @@
 set -eu
 
 ASSETS="${1:-${GLANCE_ASSETS:-assets}}"
-REF="${2:-${GLANCE_PLUGINS_REF:-v2.0.2}}"
+REF="${2:-${GLANCE_PLUGINS_REF:-v2.0.3}}"
 BASE="https://raw.githubusercontent.com/rwendell/glance-plugins/$REF"
 TARGET_DIR="$ASSETS/.plugins/plugin-manager"
 TARGET="$TARGET_DIR/plugin-manager.js"

@@ -15,13 +15,13 @@ Version 1.0.0. The plugin manager is the only plugin in `glance.yml`.
 Windows:
 
 ```bat
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.2/install/install.cmd | cmd
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.3/install/install.cmd | cmd
 ```
 
 Linux and macOS:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.2/install/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.3/install/install.sh | sh
 ```
 
 The installers write:
@@ -41,12 +41,12 @@ document:
 Use a different assets directory:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.2/install/install.sh | sh -s -- /path/to/assets
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.3/install/install.sh | sh -s -- /path/to/assets
 ```
 
 ```bat
 set "GLANCE_ASSETS=D:\path\to\assets"
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.2/install/install.cmd | cmd
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.3/install/install.cmd | cmd
 ```
 
 Manual install: copy [`plugin-manager.js`](plugin-manager.js) to `assets/.plugins/plugin-manager/plugin-manager.js` and add the script tag.
@@ -110,9 +110,9 @@ When `config.colorscheme` is set, the manager loads `themes/<colorscheme>.css` a
   "version": 1,
   "plugins": {
     "theme-switcher": {
-      "version": "2.1.1",
+      "version": "2.1.2",
       "repo": "rwendell/glance-plugins",
-      "ref": "v2.0.2",
+      "ref": "v2.0.3",
       "entry": "plugins/theme-switcher/theme-switcher.js",
       "path": ".plugins/theme-switcher/theme-switcher.js"
     }
@@ -138,7 +138,7 @@ GlancePlugins.setup({
   plugins: [
     {
       repo: "rwendell/glance-plugins",
-      ref: "v2.0.2",
+      ref: "v2.0.3",
       name: "search-enhanced",
       config: { suggestions: true }
     }
