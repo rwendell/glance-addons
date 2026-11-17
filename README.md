@@ -21,13 +21,13 @@ The plugin manager is the only plugin in `glance.yml`.
 Windows:
 
 ```bat
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.1/install/install.cmd | cmd
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.2/install/install.cmd | cmd
 ```
 
 Linux and macOS:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.1/install/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.2/install/install.sh | sh
 ```
 
 The installers write:
@@ -47,12 +47,12 @@ document:
 Use a different assets directory:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.1/install/install.sh | sh -s -- /path/to/assets
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.2/install/install.sh | sh -s -- /path/to/assets
 ```
 
 ```bat
 set "GLANCE_ASSETS=D:\path\to\assets"
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.1/install/install.cmd | cmd
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.2/install/install.cmd | cmd
 ```
 
 Manual install: copy [`plugins/plugin-manager/plugin-manager.js`](plugins/plugin-manager/plugin-manager.js) to `assets/.plugins/plugin-manager/plugin-manager.js` and add the script tag.
@@ -95,14 +95,14 @@ Add plugin entries to `assets/plugins.jsonc` and install metadata to `assets/plu
     "theme-switcher": {
       "version": "2.1.1",
       "repo": "rwendell/glance-plugins",
-      "ref": "v2.0.1",
+      "ref": "v2.0.2",
       "entry": "plugins/theme-switcher/theme-switcher.js",
       "path": ".plugins/theme-switcher/theme-switcher.js"
     },
     "search-enhanced": {
       "version": "1.0.0",
       "repo": "rwendell/glance-plugins",
-      "ref": "v2.0.1",
+      "ref": "v2.0.2",
       "entry": "plugins/search-enhanced/search-enhanced.js",
       "path": ".plugins/search-enhanced/search-enhanced.js"
     }
@@ -125,7 +125,7 @@ The [Plugin Manager docs](plugins/plugin-manager/README.md) list every `plugins.
 
 Each plugin has its own semantic version. The plugin source declares it as `setup.version`, [`glance-plugins.json`](glance-plugins.json) lists current versions, and `plugin-lock.json` records installed versions.
 
-Repository tags such as `v2.0.1` are distribution snapshots. They do not replace per-plugin versions.
+Repository tags such as `v2.0.2` are distribution snapshots. They do not replace per-plugin versions.
 
 The manager appends the installed version to local script URLs and logs a warning when the lock version differs from the plugin's `setup.version`.
 

@@ -2,11 +2,9 @@
 setlocal EnableExtensions
 
 set "ASSETS=assets"
-set "REF=v2.0.1"
+set "REF=v2.0.2"
 if defined GLANCE_ASSETS set "ASSETS=%GLANCE_ASSETS%"
 if defined GLANCE_PLUGINS_REF set "REF=%GLANCE_PLUGINS_REF%"
-if not "%~1"=="" set "ASSETS=%~1"
-if not "%~2"=="" set "REF=%~2"
 
 set "BASE=https://raw.githubusercontent.com/rwendell/glance-plugins/%REF%"
 set "TARGET_DIR=%ASSETS%\.plugins\plugin-manager"
