@@ -2,7 +2,8 @@
  * Glance Plugin Manager
  *
  * Local mode (default): reads plugins.jsonc + plugin-lock.json from the assets
- * directory and loads installed plugins from .plugins/.
+ * directory and loads installed plugins from .plugins/. Version selection and
+ * plugin downloads belong to the glance-plugins updater.
  *
  *   assets/.plugins/plugin-manager/plugin-manager.js
  *   assets/plugins.jsonc
