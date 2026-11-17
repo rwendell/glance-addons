@@ -116,6 +116,22 @@ assets/plugins/my-plugin/my-plugin.js
 
 Local plugins do not need `plugin` or `version`.
 
+## Standalone plugins
+
+Plugin Manager is optional. Copy plugin files into `assets/` and load them directly:
+
+```yaml
+document:
+  head: |
+    <link rel="stylesheet" href="/assets/themes/kissa.css">
+    <script src="/assets/theme-switcher.js"
+      data-config='{"colorscheme":"kissa"}'></script>
+    <script src="/assets/search-enhanced.js" defer
+      data-config='{"suggestions":true}'></script>
+```
+
+The theme switcher loads without `defer`. See each plugin README for its options.
+
 ## Example layout
 
 ```text

@@ -4,6 +4,8 @@ Resolves and loads Glance plugins in the browser.
 
 Version 2.0.0. The plugin manager is the only plugin in `glance.yml`.
 
+The manager is optional. Plugins also load directly with their own `data-config` attributes.
+
 ## Requirements
 
 - Glance 0.8 or newer
