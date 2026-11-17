@@ -94,13 +94,13 @@ Strict JSON; this is the machine-managed install metadata. Keep the local `path`
   "plugins": {
     "theme-switcher": {
       "repo": "rwendell/glance-plugins",
-      "ref": "v1.1.1",
+      "ref": "v1.2.1",
       "entry": "plugins/theme-switcher/theme-switcher.js",
       "path": ".plugins/theme-switcher/theme-switcher.js"
     },
     "search-enhanced": {
       "repo": "rwendell/glance-plugins",
-      "ref": "v1.1.1",
+      "ref": "v1.2.1",
       "entry": "plugins/search-enhanced/search-enhanced.js",
       "path": ".plugins/search-enhanced/search-enhanced.js"
     }
@@ -135,7 +135,7 @@ GlancePlugins.setup({
   plugins: [
     {
       repo: "rwendell/glance-plugins",
-      ref: "v1.1.1",
+      ref: "v1.2.1",
       name: "search-enhanced",
       config: { suggestions: true }
     }

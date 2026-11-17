@@ -372,26 +372,13 @@
             const lockEntry = lockedPlugins[name] || {};
             const localPath =
                 entry.path || lockEntry.path || `.plugins/${name}/${name}.js`;
-            const config = entry.config || {};
-            const colorscheme =
-                typeof config.colorscheme === "string"
-                    ? config.colorscheme.trim()
-                    : "";
-
-            if (colorscheme && !/^[a-z0-9][a-z0-9_-]*$/i.test(colorscheme)) {
-                throw new Error(`Invalid colorscheme name: ${colorscheme}`);
-            }
-
             const fallback =
                 lockEntry.repo && lockEntry.entry
                     ? `https://cdn.jsdelivr.net/gh/${lockEntry.repo}@${
                           lockEntry.ref || DEFAULT_REF
                       }/${lockEntry.entry}`
                     : null;
-            const configuredStyles =
-                entry.styles ??
-                lockEntry.styles ??
-                (colorscheme ? [`themes/${colorscheme}.css`] : []);
+            const configuredStyles = entry.styles ?? lockEntry.styles ?? [];
             const localUrl = new URL(localPath, base).href;
             const version = lockEntry.ref || lockEntry.version || "";
 
@@ -402,7 +389,7 @@
                 styles: configuredStyles.map((style) =>
                     new URL(style, base).href
                 ),
-                config,
+                config: entry.config || {},
                 enabled: entry.enabled !== false,
             };
         });
@@ -411,6 +398,7 @@
     const registry = {
         __manager: true,
         version: MANAGER_VERSION,
+        assetsBase: null,
         _loading: false,
         _plugins: Object.create(null),
 
@@ -471,6 +459,24 @@
 
                 if (spec.enabled === false) {
                     return;
+                }
+
+                if (
+                    (!spec.styles || spec.styles.length === 0) &&
+                    spec.config &&
+                    typeof spec.config.colorscheme === "string" &&
+                    this.assetsBase
+                ) {
+                    const colorscheme = spec.config.colorscheme.trim();
+
+                    if (/^[a-z0-9][a-z0-9_-]*$/i.test(colorscheme)) {
+                        spec.styles = [
+                            new URL(
+                                `themes/${colorscheme}.css`,
+                                this.assetsBase
+                            ).href,
+                        ];
+                    }
                 }
 
                 const entry = await resolveEntry(spec);
@@ -537,6 +543,8 @@
     }
 
     const base = new URL(".", script.src);
+
+    registry.assetsBase = base.href;
 
     if (script.dataset.config) {
         try {

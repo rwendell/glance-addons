@@ -94,6 +94,7 @@ The plugin intentionally has no mode/preset settings. It always follows the OS l
 ## Notes
 
 - The theme CSS is loaded by the manager before the plugin's `setup()` runs.
+- Theme files are always resolved from the local `assets/themes/` directory, even when the plugin itself is loaded remotely.
 - `window.GlanceThemeSwitcher.refresh()` reapplies the current OS preference.
 - The plugin sets `data-glance-scheme`; it does not change Glance's own theme picker. If you want pure automatic switching, use `theme.disable-picker: true`.
 - Tested with Glance v0.8.8.
