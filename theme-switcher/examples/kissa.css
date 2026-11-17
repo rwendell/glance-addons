@@ -1,0 +1,34 @@
+/*
+ * Kissa for Glance
+ * https://github.com/rwendell/kissa
+ *
+ * Save as assets/kissa.css and set:
+ *   theme:
+ *     custom-css-file: /assets/kissa.css
+ *
+ * The theme switcher plugin sets data-glance-scheme on <html>.
+ */
+
+html[data-glance-scheme="dark"] {
+    --scheme: ;
+    --bgh: 40;   /* #1F1C16 */
+    --bgs: 17%;
+    --bgl: 10%;
+    --cm: 1.15;
+    --tsm: 1.6;
+    --color-primary: hsl(211 50% 66%);   /* blue   #7FA8D4 */
+    --color-positive: hsl(97 34% 58%);   /* green  #8CB870 */
+    --color-negative: hsl(0 71% 69%);    /* red    #E87777 */
+}
+
+html[data-glance-scheme="light"] {
+    --scheme: 100% -;
+    --bgh: 48;   /* #F5F4F0 */
+    --bgs: 20%;
+    --bgl: 95%;
+    --cm: 1;
+    --tsm: 1.6;
+    --color-primary: hsl(213 53% 43%);   /* blue   #3468A8 */
+    --color-positive: hsl(146 33% 33%);  /* green  #387050 */
+    --color-negative: hsl(0 44% 43%);    /* red    #9E3E3E */
+}
