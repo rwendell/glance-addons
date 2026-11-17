@@ -81,18 +81,6 @@ Add plugin entries to `assets/plugins.jsonc`:
 }
 ```
 
-`version` accepts lazy.nvim-style semver ranges:
-
-| Value | Result |
-| ----- | ------ |
-| `false` | Latest commit on the default branch. This is the default. |
-| `"*"` | Latest stable plugin tag. |
-| `"^2.1.0"` | Latest tag compatible with `2.1.0`. |
-| `"~2.1.0"` | Latest patch release of `2.1.0`. |
-| `"2.1.x"` | Latest tag starting with `2.1`. |
-| `">=2.1.0"` | Latest tag at or above `2.1.0`. |
-| `"2.1.4"` | Exact tag. |
-
 Run the updater after editing `plugins.jsonc`:
 
 ```sh
