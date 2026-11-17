@@ -47,13 +47,14 @@ See [`examples/kissa.css`](examples/kissa.css) for a complete palette.
 ```jsonc
 {
   "name": "theme-switcher",
+  "version": false,
   "config": {
     "colorscheme": "kissa"
   }
 }
 ```
 
-4. Add a matching entry to `assets/plugin-lock.json`. See [Plugin Manager](../plugin-manager/README.md).
+4. Run the updater. It writes `assets/plugin-lock.json`. See [Plugin Manager](../plugin-manager/README.md).
 5. Keep only the manager script in `glance.yml`:
 
 ```yaml

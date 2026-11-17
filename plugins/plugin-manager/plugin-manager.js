@@ -42,7 +42,7 @@
         return;
     }
 
-    const VERSION = "1.0.0";
+    const VERSION = "1.1.0";
     const DEFAULT_REF = "main";
     const MANIFEST_NAME = "glance-plugins.json";
     const loadedScripts = new Set();
@@ -370,6 +370,14 @@
             }
 
             const lockEntry = lockedPlugins[name] || {};
+
+            if (!lockEntry.path) {
+                console.warn(
+                    `[GlancePlugins] ${name} has no lock entry. ` +
+                        "Run the updater to generate plugin-lock.json."
+                );
+            }
+
             const localPath =
                 entry.path || lockEntry.path || `.plugins/${name}/${name}.js`;
             const fallback =
@@ -380,12 +388,15 @@
                     : null;
             const configuredStyles = entry.styles ?? lockEntry.styles ?? [];
             const localUrl = new URL(localPath, base).href;
-            const version = lockEntry.version || lockEntry.ref || "";
+            const cacheKey = lockEntry.commit
+                ? lockEntry.commit.slice(0, 12)
+                : lockEntry.ref || lockEntry.version || "";
 
             return {
                 name,
-                version,
-                url: entry.url || versionedUrl(localUrl, version),
+                version: cacheKey,
+                lockVersion: lockEntry.version || "",
+                url: entry.url || versionedUrl(localUrl, cacheKey),
                 fallback,
                 styles: configuredStyles.map((style) =>
                     new URL(style, base).href
@@ -535,9 +546,13 @@
 
                 setup(config || {});
 
-                if (spec.version && setup.version && spec.version !== setup.version) {
+                if (
+                    spec.lockVersion &&
+                    setup.version &&
+                    spec.lockVersion !== setup.version
+                ) {
                     console.warn(
-                        `[GlancePlugins] ${name}: lock version ${spec.version} ` +
+                        `[GlancePlugins] ${name}: lock version ${spec.lockVersion} ` +
                             `does not match plugin version ${setup.version}`
                     );
                 }

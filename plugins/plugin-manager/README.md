@@ -2,7 +2,7 @@
 
 Loads and configures Glance plugins from `assets/plugins.jsonc`.
 
-Version 1.0.0. The plugin manager is the only plugin in `glance.yml`.
+Version 1.1.0. The plugin manager is the only plugin in `glance.yml`.
 
 ## Requirements
 
@@ -15,20 +15,20 @@ Version 1.0.0. The plugin manager is the only plugin in `glance.yml`.
 Windows:
 
 ```bat
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.5/install/install.cmd | cmd
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.1.0/install/install.cmd | cmd
 ```
 
 Linux and macOS:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.5/install/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.1.0/install/install.sh | sh
 ```
 
-The installers write:
+The installer writes:
 
 - `assets/.plugins/plugin-manager/plugin-manager.js`
+- `assets/.plugins/plugin-manager/glance-plugins` or `glance-plugins.exe`
 - `assets/plugins.jsonc` with an empty `plugins` array
-- `assets/plugin-lock.json` with an empty `plugins` object
 
 Add this to `glance.yml`:
 
@@ -41,47 +41,29 @@ document:
 Use a different assets directory:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.5/install/install.sh | sh -s -- /path/to/assets
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.1.0/install/install.sh | sh -s -- /path/to/assets
 ```
 
 ```bat
 set "GLANCE_ASSETS=D:\path\to\assets"
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.0.5/install/install.cmd | cmd
-```
-
-Manual install: copy [`plugin-manager.js`](plugin-manager.js) to `assets/.plugins/plugin-manager/plugin-manager.js` and add the script tag.
-
-The manager looks for `plugins.jsonc` next to itself and two directories up. The `.plugins/plugin-manager/` install finds `assets/plugins.jsonc`.
-
-## Layout
-
-```text
-assets/
-├── plugins.jsonc
-├── plugin-lock.json
-├── themes/
-└── .plugins/
-    ├── plugin-manager/
-    │   └── plugin-manager.js
-    ├── search-enhanced/
-    └── theme-switcher/
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v2.1.0/install/install.cmd | cmd
 ```
 
 ## `plugins.jsonc`
-
-Use comments and trailing commas.
 
 ```jsonc
 {
   "plugins": [
     {
       "name": "theme-switcher",
+      "version": false,
       "config": {
         "colorscheme": "kissa"
       }
     },
     {
       "name": "search-enhanced",
+      "version": "^1.0.0",
       "config": {
         "suggestions": true
       }
@@ -92,44 +74,97 @@ Use comments and trailing commas.
 
 | Field | Description |
 | ----- | ----------- |
-| `name` | Plugin name and the default folder name under `.plugins/`. |
+| `name` | Plugin name and folder name under `.plugins/`. |
+| `version` | Semver range, or `false` for the latest commit. Defaults to `false`. |
+| `repo` | Optional source repository. Defaults to `rwendell/glance-plugins`. |
 | `config` | Object passed to the plugin's `setup(config)`. |
 | `enabled` | Set to `false` to skip the plugin. |
-| `path` | Local script path, relative to `assets/`. |
-| `url` | Direct script URL. |
-| `styles` | Stylesheet URLs. Resolved relative to `assets/`. |
+| `path` | Optional local script path, relative to `assets/`. |
+| `url` | Optional direct script URL. |
+| `styles` | Optional stylesheet URLs, relative to `assets/`. |
 
-Plugins load in array order. Without `path`, the manager uses `plugin-lock.json`, then `.plugins/<name>/<name>.js`.
+Plugins load in array order.
 
-When `config.colorscheme` is set, the manager loads `themes/<colorscheme>.css` automatically.
+## Updater
 
-## `plugin-lock.json`
+Run the updater after editing `plugins.jsonc`:
+
+```sh
+assets/.plugins/plugin-manager/glance-plugins update
+```
+
+```bat
+assets\.plugins\plugin-manager\glance-plugins.exe update
+```
+
+The updater:
+
+- Resolves each `version` against the plugin's semver tags.
+- `version: false` resolves to the latest commit on the default branch.
+- Downloads the plugin entry into `assets/.plugins/<name>/`.
+- Writes `assets/plugin-lock.json` with resolved versions, tags, commits, and paths.
+
+Do not edit `plugin-lock.json`. The next updater run rewrites it.
+
+Flags:
+
+| Flag | Description |
+| ---- | ----------- |
+| `--dry-run` | Resolve and print versions without downloading or writing. |
+| `--force` | Download every plugin. |
+| `--assets PATH` | Assets directory. Defaults to the directory detected from the updater location. |
+| `--repo OWNER/NAME` | Default plugin repository. |
+
+Set `GITHUB_TOKEN` to raise the GitHub API rate limit.
+
+## Lock file
 
 ```json
 {
   "version": 1,
+  "generatedAt": "2026-11-17T22:10:43Z",
   "plugins": {
     "theme-switcher": {
+      "requested": false,
       "version": "2.1.4",
       "repo": "rwendell/glance-plugins",
-      "ref": "v2.0.5",
+      "ref": "75670a0cdf23e0266479f56f56346e0927c9b07e",
+      "commit": "75670a0cdf23e0266479f56f56346e0927c9b07e",
       "entry": "plugins/theme-switcher/theme-switcher.js",
-      "path": ".plugins/theme-switcher/theme-switcher.js"
+      "path": ".plugins/theme-switcher/theme-switcher.js",
+      "resolvedAt": "2026-11-17T22:10:43Z"
     }
   }
 }
 ```
 
-The manager loads `path` first. If that file is missing, it loads `repo` + `ref` + `entry` from jsDelivr.
+The runtime manager loads `path` from the lock. If the local file is missing, it loads `repo` + `ref` + `entry` from jsDelivr.
 
 ## Versions
 
-- Plugin source: `setup.version`.
-- [`glance-plugins.json`](../../glance-plugins.json): current version of every plugin.
-- `plugin-lock.json`: installed version and source ref.
-- Repository tags: distribution snapshots.
+Each plugin has its own semantic version and its own tag, for example `theme-switcher-v2.1.4`.
 
-The manager appends the installed version to local script URLs and logs a warning when the lock version differs from the plugin's `setup.version`.
+`version` in `plugins.jsonc` selects a tag:
+
+| Value | Result |
+| ----- | ------ |
+| `false` | Latest commit on the default branch. |
+| `"*"` | Latest stable tag. |
+| `"^2.1.0"` | Latest compatible tag. |
+| `"~2.1.0"` | Latest patch tag. |
+| `"2.1.x"` | Latest tag starting with `2.1`. |
+| `">=2.1.0"` | Latest tag at or above `2.1.0`. |
+| `"2.1.4"` | Exact tag. |
+
+## Troubleshooting
+
+The manager does not load: check the script path in `glance.yml` and `server.assets-path`.
+
+A plugin does not load: run the updater, then check the browser console and `plugin-lock.json`.
+
+`no lock entry` warning: run the updater.
+
+`lock version does not match plugin version`: rerun the updater.
 
 ## Remote loading
 
@@ -138,24 +173,12 @@ GlancePlugins.setup({
   plugins: [
     {
       repo: "rwendell/glance-plugins",
-      ref: "v2.0.5",
-      name: "search-enhanced",
-      config: { suggestions: true }
+      ref: "theme-switcher-v2.1.4",
+      name: "theme-switcher",
+      config: { colorscheme: "kissa" }
     }
   ]
 });
 ```
 
-Specs support `repo`, `name`, `ref`, `url`, `entry`, `base`, `manifest`, `styles`, `enabled`, and `config`. `repo` + `name` resolves through [`glance-plugins.json`](../../glance-plugins.json), then `plugins/<name>/<name>.js`.
-
 Theme files resolve from the local `assets/themes/` directory.
-
-## Troubleshooting
-
-The manager does not load: check the script path in `glance.yml` and `server.assets-path`. The browser console reports missing files.
-
-A plugin does not load: check the `name` in `plugins.jsonc`, the `path` in `plugin-lock.json`, and the browser console.
-
-Theme colors do not change: `assets/themes/<colorscheme>.css` needs both `html[data-glance-scheme="light"]` and `html[data-glance-scheme="dark"]` blocks.
-
-`lock version does not match plugin version`: update the `version` in `plugin-lock.json` or replace the local plugin file with the matching version.

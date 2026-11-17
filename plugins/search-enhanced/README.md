@@ -23,6 +23,7 @@ A URL query shows two rows: **Open** and **Search for "…"**.
 ```jsonc
 {
   "name": "search-enhanced",
+  "version": false,
   "config": {
     "directUrls": true,
     "suggestions": true,
@@ -31,7 +32,7 @@ A URL query shows two rows: **Open** and **Search for "…"**.
 }
 ```
 
-3. Add a matching entry to `assets/plugin-lock.json`. See [Plugin Manager](../plugin-manager/README.md).
+3. Run the updater. It writes `assets/plugin-lock.json`. See [Plugin Manager](../plugin-manager/README.md).
 
 ### Standalone
 
