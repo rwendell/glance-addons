@@ -5,36 +5,43 @@
  * - Shows live Google search suggestions while typing.
  * - Keeps Glance bangs and new-tab behavior intact.
  *
- * Optional configuration (set before this script loads):
+ * Standalone:
  *
- *   window.GLANCE_ENHANCED_SEARCH = {
- *     suggestions: true,
- *     maxSuggestions: 8,
- *     directUrls: true
- *   };
+ *   <script src="/assets/search-enhanced.js" defer
+ *     data-config='{"suggestions":true,"maxSuggestions":8}'></script>
+ *
+ * With the plugin loader:
+ *
+ *   GlancePlugins.setup({
+ *     plugins: [{
+ *       repo: "rwendell/glance-plugins",
+ *       name: "search-enhanced",
+ *       config: { suggestions: true, maxSuggestions: 8 }
+ *     }]
+ *   });
  */
-(() => {
+(function () {
     "use strict";
 
-    if (window.__glanceEnhancedSearchLoaded) {
-        return;
+    const NAME = "search-enhanced";
+    let initialized = false;
+    let config = null;
+    let maxSuggestions = 8;
+
+    function readInlineConfig() {
+        const script = document.currentScript;
+
+        if (!script || !script.dataset.config) {
+            return {};
+        }
+
+        try {
+            return JSON.parse(script.dataset.config);
+        } catch (error) {
+            console.error(`[${NAME}] Invalid data-config JSON:`, error);
+            return {};
+        }
     }
-
-    window.__glanceEnhancedSearchLoaded = true;
-
-    const config = Object.assign(
-        {
-            suggestions: true,
-            maxSuggestions: 8,
-            directUrls: true,
-        },
-        window.GLANCE_ENHANCED_SEARCH || {}
-    );
-
-    const maxSuggestions = Math.min(
-        15,
-        Math.max(1, Number(config.maxSuggestions) || 8)
-    );
 
     // A URL-ish query is either localhost, an IPv4 address, or a domain name
     // ending in a real-looking TLD. File extensions are excluded so queries
@@ -562,7 +569,7 @@
         document.head.appendChild(style);
     }
 
-    function init() {
+    function start() {
         injectStyles();
 
         const observer = new MutationObserver(() => scanForSearchWidgets());
@@ -571,9 +578,41 @@
         scanForSearchWidgets();
     }
 
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init, { once: true });
-    } else {
-        init();
+    function setup(userConfig) {
+        if (initialized) {
+            return;
+        }
+
+        initialized = true;
+
+        config = Object.assign(
+            {
+                suggestions: true,
+                maxSuggestions: 8,
+                directUrls: true,
+            },
+            userConfig || {}
+        );
+
+        maxSuggestions = Math.min(
+            15,
+            Math.max(1, Number(config.maxSuggestions) || 8)
+        );
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", start, { once: true });
+        } else {
+            start();
+        }
+    }
+
+    const registry = window.GlancePlugins || (window.GlancePlugins = {});
+
+    if (typeof registry.register === "function") {
+        registry.register(NAME, setup);
+    }
+
+    if (!registry._loading) {
+        setup(readInlineConfig());
     }
 })();

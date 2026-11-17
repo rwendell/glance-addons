@@ -2,7 +2,7 @@
 
 Follows your operating system's light/dark preference and switches between two Glance theme presets automatically. The theme picker still works: pick the light or dark preset to pin a variant, pick the auto preset to follow the OS again, or pick any other theme to turn the switcher off.
 
-The switcher avoids a flash of the wrong theme by applying a marker attribute to `<html>` **before the page paints**. Your palette lives in CSS, so no request is needed to switch.
+The switcher avoids a flash of the wrong theme when it is loaded before the page paints. Your palette lives in CSS, so no request is needed to switch.
 
 ## How it works
 
@@ -63,15 +63,8 @@ server:
 
 document:
   head: |
-    <script>
-      window.GLANCE_THEME_SWITCHER = {
-        lightPreset: "my-light",
-        darkPreset: "my-dark",
-        autoPreset: "my-auto",
-        storageKey: "my-theme-mode"
-      };
-    </script>
-    <script src="/assets/theme-switcher.js"></script>
+    <script src="/assets/theme-switcher.js"
+      data-config='{"lightPreset":"my-light","darkPreset":"my-dark","autoPreset":"my-auto","storageKey":"my-theme-mode"}'></script>
 
 theme:
   custom-css-file: /assets/my-theme.css
@@ -95,9 +88,38 @@ theme:
       primary-color: 43 50 70
 ```
 
-The script must load **without** `defer` so the marker is set before paint. The config object must be defined before the script tag.
+The script must load **without** `defer` so the marker is set before paint. Its config lives on its own `data-config` attribute; there is no shared global config block.
 
 ## Configuration
+
+The plugin reads the options from its own `data-config` attribute:
+
+```yaml
+document:
+  head: |
+    <script src="/assets/theme-switcher.js"
+      data-config='{"lightPreset":"my-light","darkPreset":"my-dark","autoPreset":"my-auto"}'></script>
+```
+
+Or use the [plugin loader](../README.md#plugin-loader), which passes a config object to `setup()`:
+
+```js
+GlancePlugins.setup({
+  plugins: [
+    {
+      repo: "rwendell/glance-plugins",
+      name: "theme-switcher",
+      config: {
+        lightPreset: "my-light",
+        darkPreset: "my-dark",
+        autoPreset: "my-auto"
+      }
+    }
+  ]
+});
+```
+
+Remote loading may paint the fallback theme briefly before the plugin arrives. For a flash-free setup, keep `theme-switcher.js` local and load it directly without `defer`.
 
 | Option | Default | Description |
 | ------ | ------- | ----------- |

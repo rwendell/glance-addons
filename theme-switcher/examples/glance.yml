@@ -6,21 +6,10 @@ server:
 
 document:
   head: |
-    <script>
-      window.GLANCE_THEME_SWITCHER = {
-        lightPreset: "kissa-latte",
-        darkPreset: "kissa-macchiato",
-        autoPreset: "kissa-auto",
-        storageKey: "kissa-theme-mode"
-      };
-      window.GLANCE_ENHANCED_SEARCH = {
-        directUrls: true,
-        suggestions: true,
-        maxSuggestions: 8
-      };
-    </script>
-    <script src="/assets/theme-switcher.js"></script>
-    <script src="/assets/search-enhanced.js" defer></script>
+    <script src="/assets/theme-switcher.js"
+      data-config='{"lightPreset":"kissa-latte","darkPreset":"kissa-macchiato","autoPreset":"kissa-auto","storageKey":"kissa-theme-mode"}'></script>
+    <script src="/assets/search-enhanced.js" defer
+      data-config='{"directUrls":true,"suggestions":true,"maxSuggestions":8}'></script>
 
 theme:
   # Remove this line if you want the theme picker visible.

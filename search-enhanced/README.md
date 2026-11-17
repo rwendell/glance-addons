@@ -15,12 +15,13 @@ When a query looks like a URL, the dropdown shows two choices: **Open** and **Se
 
 1. Copy [`search-enhanced.js`](search-enhanced.js) into your Glance assets directory. With `server.assets-path: assets`, that is `assets/search-enhanced.js` next to `glance.yml`.
 
-2. Load it from `document.head`:
+2. Load it from `document.head` and put the config on the plugin's own script tag:
 
 ```yaml
 document:
   head: |
-    <script src="/assets/search-enhanced.js" defer></script>
+    <script src="/assets/search-enhanced.js" defer
+      data-config='{"suggestions":true,"maxSuggestions":8}'></script>
 ```
 
 If you use [`base-url`](https://github.com/glanceapp/glance/blob/main/docs/configuration.md#base-url), prefix the path:
@@ -28,26 +29,39 @@ If you use [`base-url`](https://github.com/glanceapp/glance/blob/main/docs/confi
 ```yaml
 document:
   head: |
-    <script src="/glance/assets/search-enhanced.js" defer></script>
+    <script src="/glance/assets/search-enhanced.js" defer
+      data-config='{"suggestions":true}'></script>
 ```
 
 No changes to the search widget itself are required.
 
 ## Configuration
 
-All options are optional. Set them before the script loads:
+All options are optional. Pass them in the plugin's own `data-config` attribute:
 
 ```yaml
 document:
   head: |
-    <script>
-      window.GLANCE_ENHANCED_SEARCH = {
+    <script src="/assets/search-enhanced.js" defer
+      data-config='{"directUrls":true,"suggestions":true,"maxSuggestions":8}'></script>
+```
+
+Or with the [plugin loader](../README.md#plugin-loader):
+
+```js
+GlancePlugins.setup({
+  plugins: [
+    {
+      repo: "rwendell/glance-plugins",
+      name: "search-enhanced",
+      config: {
         directUrls: true,
         suggestions: true,
         maxSuggestions: 8
-      };
-    </script>
-    <script src="/assets/search-enhanced.js" defer></script>
+      }
+    }
+  ]
+});
 ```
 
 | Option | Default | Description |

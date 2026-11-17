@@ -1,0 +1,12 @@
+{
+  "plugins": {
+    "search-enhanced": {
+      "entry": "search-enhanced/search-enhanced.js",
+      "description": "URL-aware search bar with Google suggestions."
+    },
+    "theme-switcher": {
+      "entry": "theme-switcher/theme-switcher.js",
+      "description": "Automatic light/dark switching for Glance theme presets."
+    }
+  }
+}
