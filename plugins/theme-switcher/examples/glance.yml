@@ -1,5 +1,10 @@
 # Complete example: Glance + Kissa + Theme Switcher + Enhanced Search.
 # Copy theme-switcher.js, search-enhanced.js, and kissa.css into ./assets/.
+#
+# This is the standalone setup. With plugin-manager.js, remove
+# theme.custom-css-file and declare the palette under the theme-switcher
+# entry in plugins.jsonc instead:
+#   "styles": [".plugins/theme-switcher/kissa.css"]
 
 server:
   assets-path: assets

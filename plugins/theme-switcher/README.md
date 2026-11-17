@@ -121,6 +121,22 @@ GlancePlugins.setup({
 });
 ```
 
+When using the local manager, declare the palette as a `styles` entry instead of `theme.custom-css-file`:
+
+```jsonc
+{
+  "name": "theme-switcher",
+  "styles": [".plugins/theme-switcher/kissa.css"],
+  "config": {
+    "lightPreset": "kissa-latte",
+    "darkPreset": "kissa-macchiato",
+    "autoPreset": "kissa-auto"
+  }
+}
+```
+
+The styles path is resolved relative to the assets directory.
+
 Remote loading may paint the fallback theme briefly before the plugin arrives. For a flash-free setup, keep `theme-switcher.js` local and load it directly without `defer`.
 
 | Option | Default | Description |

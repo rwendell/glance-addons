@@ -373,7 +373,9 @@
                 name,
                 url: entry.url || new URL(localPath, base).href,
                 fallback,
-                styles: entry.styles || lockEntry.styles || [],
+                styles: (entry.styles || lockEntry.styles || []).map((style) =>
+                    new URL(style, base).href
+                ),
                 config: entry.config || {},
                 enabled: entry.enabled !== false,
             };

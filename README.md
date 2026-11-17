@@ -28,7 +28,7 @@ assets/
         └── theme-switcher.js
 ```
 
-`glance.yml` only needs the manager and the theme CSS:
+`glance.yml` only needs the manager:
 
 ```yaml
 server:
@@ -37,10 +37,9 @@ server:
 document:
   head: |
     <script src="/assets/plugin-manager.js"></script>
-
-theme:
-  custom-css-file: /assets/.plugins/theme-switcher/kissa.css
 ```
+
+The plugin manager injects the palette CSS declared by the plugin entry, so there is no `theme.custom-css-file` in `glance.yml`.
 
 The manager path is relative to itself, so this also works under a `base-url`.
 
@@ -53,6 +52,7 @@ This is where every plugin's config lives. Comments and trailing commas are allo
   "plugins": [
     {
       "name": "theme-switcher",
+      "styles": [".plugins/theme-switcher/kissa.css"],
       "config": {
         "lightPreset": "kissa-latte",
         "darkPreset": "kissa-macchiato",
@@ -82,6 +82,8 @@ This is where every plugin's config lives. Comments and trailing commas are allo
 | `styles` | Optional stylesheet URLs. |
 
 Plugins are loaded in array order. If `path` is omitted, the manager uses `plugin-lock.json` and then falls back to `.plugins/<name>/<name>.js`.
+
+`styles` entries in `plugins.jsonc` are resolved relative to the assets directory. In remote specs they resolve relative to the plugin script.
 
 ## `plugin-lock.json`
 
