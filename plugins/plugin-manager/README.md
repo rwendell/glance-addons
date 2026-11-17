@@ -2,7 +2,7 @@
 
 Loads and configures Glance plugins from `assets/plugins.jsonc`.
 
-Version 1.0.0. This is the only plugin in `glance.yml`.
+Version 1.0.0. The plugin manager is the only plugin in `glance.yml`.
 
 ## Requirements
 
