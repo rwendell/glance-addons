@@ -4,7 +4,7 @@
 # This is the standalone setup. With plugin-manager.js, remove
 # theme.custom-css-file and declare the palette under the theme-switcher
 # entry in plugins.jsonc instead:
-#   "styles": [".plugins/theme-switcher/kissa.css"]
+#   "styles": ["themes/kissa.css"]
 
 server:
   assets-path: assets
@@ -20,7 +20,7 @@ theme:
   # Remove this line if you want the theme picker visible.
   # disable-picker: true
 
-  custom-css-file: /assets/kissa.css
+  custom-css-file: /assets/themes/kissa.css
 
   # Kissa Macchiato is the server-rendered fallback.
   background-color: 40 17 10

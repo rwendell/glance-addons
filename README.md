@@ -20,13 +20,16 @@ assets/
 ├── plugin-manager.js
 ├── plugins.jsonc
 ├── plugin-lock.json
+├── themes/
+│   └── kissa.css
 └── .plugins/
     ├── search-enhanced/
     │   └── search-enhanced.js
     └── theme-switcher/
-        ├── kissa.css
         └── theme-switcher.js
 ```
+
+`themes/` is a convention for user-owned palettes, not a requirement. Any CSS path under assets can be used.
 
 `glance.yml` only needs the manager:
 
@@ -52,7 +55,7 @@ This is where every plugin's config lives. Comments and trailing commas are allo
   "plugins": [
     {
       "name": "theme-switcher",
-      "styles": [".plugins/theme-switcher/kissa.css"],
+      "styles": ["themes/kissa.css"],
       "config": {
         "lightPreset": "kissa-latte",
         "darkPreset": "kissa-macchiato",
@@ -83,7 +86,7 @@ This is where every plugin's config lives. Comments and trailing commas are allo
 
 Plugins are loaded in array order. If `path` is omitted, the manager uses `plugin-lock.json` and then falls back to `.plugins/<name>/<name>.js`.
 
-`styles` entries in `plugins.jsonc` are resolved relative to the assets directory. In remote specs they resolve relative to the plugin script.
+`styles` entries in `plugins.jsonc` are resolved relative to the assets directory. In remote specs they resolve relative to the plugin script. Recommended layout for user palettes: `assets/themes/<name>.css`.
 
 ## `plugin-lock.json`
 
@@ -95,13 +98,13 @@ Strict JSON; this is the machine-managed install metadata. Keep the local `path`
   "plugins": {
     "theme-switcher": {
       "repo": "rwendell/glance-plugins",
-      "ref": "v1.1.0",
+      "ref": "v1.1.1",
       "entry": "plugins/theme-switcher/theme-switcher.js",
       "path": ".plugins/theme-switcher/theme-switcher.js"
     },
     "search-enhanced": {
       "repo": "rwendell/glance-plugins",
-      "ref": "v1.1.0",
+      "ref": "v1.1.1",
       "entry": "plugins/search-enhanced/search-enhanced.js",
       "path": ".plugins/search-enhanced/search-enhanced.js"
     }
@@ -135,7 +138,7 @@ GlancePlugins.setup({
   plugins: [
     {
       repo: "rwendell/glance-plugins",
-      ref: "v1.1.0",
+      ref: "v1.1.1",
       name: "search-enhanced",
       config: { suggestions: true }
     }

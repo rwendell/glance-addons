@@ -20,7 +20,7 @@ or
 <html data-glance-scheme="dark">
 ```
 
-Your `theme.custom-css-file` maps those markers to Glance's CSS variables:
+Your palette CSS maps those markers to Glance's CSS variables. Load it with `theme.custom-css-file` for a standalone install, or with the `styles` entry in `plugins.jsonc` when using the manager:
 
 ```css
 html[data-glance-scheme="dark"] {
@@ -53,7 +53,7 @@ When the switcher is off, the attribute is removed and Glance's own theme render
 ## Installation
 
 1. Copy [`theme-switcher.js`](theme-switcher.js) into your assets directory.
-2. Copy your palette CSS into the same directory (see [`examples/kissa.css`](examples/kissa.css) for a complete example).
+2. Copy your palette CSS into `assets/themes/<name>.css` (recommended), or anywhere under the assets directory. See [`examples/kissa.css`](examples/kissa.css) for a complete example.
 3. Define three presets in `glance.yml`: light, dark, and an auto/fallback preset.
 4. Configure the plugin and load it from `document.head`.
 
@@ -69,7 +69,7 @@ document:
       data-config='{"lightPreset":"my-light","darkPreset":"my-dark","autoPreset":"my-auto","storageKey":"my-theme-mode"}'></script>
 
 theme:
-  custom-css-file: /assets/my-theme.css
+  custom-css-file: /assets/themes/my-theme.css
 
   # Fallback used by the server before the plugin runs.
   background-color: 240 8 9
@@ -126,7 +126,7 @@ When using the local manager, declare the palette as a `styles` entry instead of
 ```jsonc
 {
   "name": "theme-switcher",
-  "styles": [".plugins/theme-switcher/kissa.css"],
+  "styles": ["themes/kissa.css"],
   "config": {
     "lightPreset": "kissa-latte",
     "darkPreset": "kissa-macchiato",

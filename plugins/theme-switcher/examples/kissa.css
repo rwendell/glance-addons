@@ -2,9 +2,9 @@
  * Kissa for Glance
  * https://github.com/rwendell/kissa
  *
- * Save as assets/kissa.css and set:
+ * Save as assets/themes/kissa.css and set:
  *   theme:
- *     custom-css-file: /assets/kissa.css
+ *     custom-css-file: /assets/themes/kissa.css
  *
  * The theme switcher plugin sets data-glance-scheme on <html>.
  */
