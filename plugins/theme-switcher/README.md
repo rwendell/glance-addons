@@ -2,7 +2,7 @@
 
 Switches a colorscheme's light and dark palettes with the OS preference, or with a manual Light/Dark/System control in the header.
 
-Version 2.1.3.
+Version 2.1.4.
 
 ## Requirements
 
