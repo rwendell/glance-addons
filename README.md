@@ -50,16 +50,14 @@ Strict JSON. No comments or trailing commas.
 {
   "plugins": [
     {
-      "name": "theme-switcher",
-      "plugin": "rwendell/glance-plugins",
+      "plugin": "rwendell/glance-plugins:theme-switcher",
       "version": false,
       "config": {
         "colorscheme": "kissa"
       }
     },
     {
-      "name": "search-enhanced",
-      "plugin": "rwendell/glance-plugins",
+      "plugin": "rwendell/glance-plugins:search-enhanced",
       "version": "^1.0.0",
       "config": {
         "suggestions": true
@@ -71,8 +69,8 @@ Strict JSON. No comments or trailing commas.
 
 | Field | Description |
 | ----- | ----------- |
-| `name` | Plugin name and folder name under `plugins/`. |
-| `plugin` | GitHub repository as `owner/repo`. Defaults to `rwendell/glance-plugins`. |
+| `plugin` | Remote plugin source as `owner/repo:plugin`. |
+| `name` | Local plugin name and folder name under `plugins/`. Omit for remote plugins. |
 | `version` | Semver range or `false`. Defaults to `false`. |
 | `config` | Object passed to the plugin's `setup(config)`. |
 | `enabled` | Set to `false` to skip the plugin. |

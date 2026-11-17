@@ -254,6 +254,26 @@
         }
     }
 
+    function parsePluginSource(spec) {
+        const raw = String(spec.plugin || "").trim();
+        const name = String(spec.name || "").trim();
+
+        if (!raw) {
+            return { repo: "", name };
+        }
+
+        const separator = raw.lastIndexOf(":");
+
+        if (separator === -1) {
+            return { repo: raw, name };
+        }
+
+        return {
+            repo: raw.slice(0, separator).trim(),
+            name: raw.slice(separator + 1).trim(),
+        };
+    }
+
     function versionSpec(raw) {
         if (raw === undefined || raw === null || raw === false) {
             return { pinned: false, exact: false };
@@ -641,7 +661,21 @@
                 continue;
             }
 
-            const name = String(spec.name || "").trim();
+            let source;
+
+            try {
+                source = parsePluginSource(spec);
+            } catch (error) {
+                console.error(`[GlancePlugins] ${error.message}`);
+                continue;
+            }
+
+            const name = source.name;
+
+            if (!name) {
+                console.error("[GlancePlugins] Plugin source needs a name");
+                continue;
+            }
 
             if (!/^[a-z0-9][a-z0-9_-]*$/i.test(name)) {
                 console.error(`[GlancePlugins] Invalid plugin name: ${name}`);
@@ -662,7 +696,11 @@
             }
 
             try {
-                const entry = await resolveRemote(name, spec, lock);
+                const entry = await resolveRemote(
+                    name,
+                    { ...spec, plugin: source.repo },
+                    lock
+                );
                 plans.push({
                     name,
                     config: spec.config || {},

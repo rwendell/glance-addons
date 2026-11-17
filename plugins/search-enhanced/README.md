@@ -21,8 +21,7 @@ Add an entry to `assets/plugins.json`:
 
 ```json
 {
-  "name": "search-enhanced",
-  "plugin": "rwendell/glance-plugins",
+  "plugin": "rwendell/glance-plugins:search-enhanced",
   "version": false,
   "config": {
     "directUrls": true,
@@ -32,7 +31,7 @@ Add an entry to `assets/plugins.json`:
 }
 ```
 
-For a local copy, place [`search-enhanced.js`](search-enhanced.js) at `assets/plugins/search-enhanced/search-enhanced.js` and omit `plugin` and `version`.
+For a local copy, place [`search-enhanced.js`](search-enhanced.js) at `assets/plugins/search-enhanced/search-enhanced.js` and use `{ "name": "search-enhanced" }` without `plugin` or `version`.
 
 See [Plugin Manager](../plugin-manager/README.md).
 
