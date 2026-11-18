@@ -4,7 +4,7 @@ Switches a colorscheme's light and dark palettes and adds a light/dark/system to
 
 ## Install
 
-Copy the colorscheme to `assets/themes/<colorscheme>.css`. It must define both:
+Copy the colorscheme to `~/.config/glance/assets/themes/<colorscheme>.css`. It must define both:
 
 ```css
 html[data-glance-scheme="dark"]  { /* dark palette */ }
@@ -13,7 +13,7 @@ html[data-glance-scheme="light"] { /* light palette */ }
 
 Example: [`examples/kissa.css`](examples/kissa.css).
 
-Plugin manager, `assets/plugins.json`:
+Add this entry to the `plugins` array in `~/.config/glance/plugins.json`:
 
 ```json
 {
@@ -25,7 +25,7 @@ Plugin manager, `assets/plugins.json`:
 }
 ```
 
-Standalone: copy `dist/theme-switcher.js` to `assets/`.
+Standalone: copy `dist/theme-switcher.js` to `~/.config/glance/assets/`.
 
 ```yaml
 document:

@@ -6,7 +6,7 @@ Bangs take priority. File-like tokens such as `main.py` search normally.
 
 ## Install
 
-Plugin manager, `assets/plugins.json`:
+Add this entry to the `plugins` array in `~/.config/glance/plugins.json`:
 
 ```json
 {
@@ -20,7 +20,7 @@ Plugin manager, `assets/plugins.json`:
 }
 ```
 
-Standalone: copy `dist/search-enhanced.js` to `assets/`.
+Standalone: copy `dist/search-enhanced.js` to `~/.config/glance/assets/`.
 
 ```yaml
 document:
