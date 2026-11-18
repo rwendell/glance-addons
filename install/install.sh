@@ -35,5 +35,5 @@ fi
 
 printf '\nPlugin manager installed to %s\n\n' "$TARGET"
 printf 'Add this to glance.yml:\n\n'
-printf 'document:\n  head: |\n    <script src="/assets/plugin-manager.js"></script>\n'
+printf 'document: { head: '<script src="/assets/plugin-manager.js"></script>' }'
 printf '\nEdit %s/plugins.json to add plugins.\n' "$ASSETS"
