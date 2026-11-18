@@ -2,17 +2,17 @@
   "plugins": {
     "plugin-manager": {
       "version": "3.0.0",
-      "entry": "plugins/plugin-manager/plugin-manager.js",
+      "entry": "plugins/plugin-manager/dist/plugin-manager.js",
       "description": "Loads and configures Glance plugins."
     },
     "search-enhanced": {
       "version": "2.0.0",
-      "entry": "plugins/search-enhanced/search-enhanced.js",
+      "entry": "plugins/search-enhanced/dist/search-enhanced.js",
       "description": "URL-aware search bar with Google suggestions."
     },
     "theme-switcher": {
       "version": "3.0.0",
-      "entry": "plugins/theme-switcher/theme-switcher.js",
+      "entry": "plugins/theme-switcher/dist/theme-switcher.js",
       "description": "Light/dark/system switching for a colorscheme."
     }
   }

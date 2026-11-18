@@ -18,7 +18,7 @@ if defined ERR exit /b 1
 if not exist "%ASSETS%\plugins" mkdir "%ASSETS%\plugins"
 
 echo Downloading plugin-manager (%REF%)...
-curl.exe -fsSL "%RAW%/plugins/plugin-manager/plugin-manager.js" -o "%TARGET%"
+curl.exe -fsSL "%RAW%/plugins/plugin-manager/dist/plugin-manager.js" -o "%TARGET%"
 set "ERR="
 if errorlevel 1 set "ERR=1"
 if defined ERR echo Failed to download plugin-manager.

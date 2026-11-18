@@ -1,4 +1,6 @@
-// plugins/search-enhanced/search-enhanced.ts
+// Generated from plugins/search-enhanced/src/search-enhanced.ts by build.mjs. Do not edit.
+
+// plugins/search-enhanced/src/search-enhanced.ts
 var version = "2.0.0";
 var initialized = false;
 var config = {};

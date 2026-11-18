@@ -4,8 +4,8 @@
  *
  * Save as assets/themes/kissa.css.
  *
- * With plugin-manager.js, this file is loaded automatically when the
- * theme-switcher entry in plugins.jsonc uses {"colorscheme": "kissa"}.
+ * With Plugin Manager, this file is loaded automatically when the
+ * theme-switcher entry in plugins.json uses {"colorscheme": "kissa"}.
  *
  * Standalone, set:
  *   theme:

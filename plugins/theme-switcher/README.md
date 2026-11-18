@@ -25,7 +25,7 @@ Plugin manager, `assets/plugins.json`:
 }
 ```
 
-Standalone:
+Standalone: copy `dist/theme-switcher.js` to `assets/`.
 
 ```yaml
 document:

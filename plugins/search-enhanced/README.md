@@ -20,7 +20,7 @@ Plugin manager, `assets/plugins.json`:
 }
 ```
 
-Standalone:
+Standalone: copy `dist/search-enhanced.js` to `assets/`.
 
 ```yaml
 document:

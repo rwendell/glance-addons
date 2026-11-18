@@ -22,8 +22,6 @@ Add this to `glance.yml`:
 document: { head: '<script src="/assets/plugin-manager.js"></script>' }
 ```
 
-
-
 ## Plugin API
 
 Plugins are ES modules:
@@ -38,7 +36,7 @@ export const version = "1.0.0";
 
 TypeScript and plain JavaScript both work. The manager imports the module and calls `setup(config)`.
 
-This repository builds TypeScript plugins with `npm run build`.
+Plugin sources live in `src/`. The committed `dist/` files are the builds that Glance loads. Rebuild with `aube run build`.
 
 ## Adding plugins
 

@@ -26,7 +26,7 @@ download() {
 mkdir -p "$ASSETS/plugins"
 
 echo "Downloading plugin-manager ($REF)..."
-download "$RAW/plugins/plugin-manager/plugin-manager.js" "$TARGET"
+download "$RAW/plugins/plugin-manager/dist/plugin-manager.js" "$TARGET"
 
 if [ ! -f "$ASSETS/plugins.json" ]; then
     printf '{\n  "plugins": []\n}\n' > "$ASSETS/plugins.json"

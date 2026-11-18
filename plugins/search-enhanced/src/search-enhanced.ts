@@ -7,18 +7,18 @@
  *
  * Standalone:
  *
- *   <script src="/assets/search-enhanced.js" defer
- *     data-config='{"suggestions":true,"maxSuggestions":8}'></script>
+ *   <script type="module">
+ *     import setup from "/assets/search-enhanced.js";
+ *     setup({ suggestions: true, maxSuggestions: 8 });
+ *   </script>
  *
- * With the plugin loader:
+ * With Plugin Manager:
  *
- *   GlancePlugins.setup({
- *     plugins: [{
- *       repo: "rwendell/glance-plugins",
- *       name: "search-enhanced",
- *       config: { suggestions: true, maxSuggestions: 8 }
- *     }]
- *   });
+ *   {
+ *     "plugin": "rwendell/glance-plugins:search-enhanced",
+ *     "version": false,
+ *     "config": { "suggestions": true, "maxSuggestions": 8 }
+ *   }
  */
 export interface SearchEnhancedConfig {
     directUrls?: boolean;

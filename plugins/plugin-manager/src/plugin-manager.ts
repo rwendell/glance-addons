@@ -4,19 +4,129 @@
  * Browser-only manager. Reads plugins.json, resolves versions, loads plugins
  * from jsDelivr, and keeps a runtime lock in localStorage.
  *
- * Local plugins live in assets/plugins/<name>/<name>.js and take precedence
- * over remote plugins.
+ * Local plugins are ES module URLs. They take precedence over remote plugins.
  *
  * Config:
  *   {
  *     "plugins": [
- *       { "name": "theme-switcher", "version": false, "config": {} }
+ *       { "plugin": "owner/repo:theme-switcher", "version": false, "config": {} }
  *     ]
  *   }
  *
- * Version values follow lazy.nvim semantics:
- *   false, "*", "^1.2.3", "~1.2.3", "1.2.x", ">=1.2.3", "1.2.3"
+ * Version values: false, "*", "^1.2.3", "~1.2.3", "1.2.x", ">=1.2.3", "1.2.3"
  */
+
+interface PluginSpec {
+    plugin?: string;
+    version?: string | false;
+    config?: unknown;
+    enabled?: boolean;
+}
+
+interface PluginConfig {
+    plugins?: PluginSpec[];
+}
+
+interface PluginInfo {
+    version?: string;
+    entry?: string;
+    description?: string;
+}
+
+interface PluginManifest {
+    plugins?: Record<string, PluginInfo | undefined>;
+}
+
+interface RepoCache {
+    branch?: string;
+    branchAt?: number;
+    latestCommit?: string;
+    latestAt?: number;
+    tags?: string[];
+    tagsAt?: number;
+}
+
+interface LockEntry {
+    requested?: string;
+    version?: string;
+    repo?: string;
+    ref?: string;
+    entry?: string;
+    kind?: "latest" | "tag";
+    resolvedAt?: number;
+    local?: boolean;
+    path?: string;
+}
+
+interface ResolvedEntry extends LockEntry {
+    requested: string;
+    version: string;
+    repo: string;
+    ref: string;
+    entry: string;
+    kind: "latest" | "tag";
+    resolvedAt: number;
+    local?: false;
+}
+
+interface PluginLock {
+    version: number;
+    updatedAt: number;
+    repos: Record<string, RepoCache | undefined>;
+    plugins: Record<string, LockEntry | undefined>;
+}
+
+interface Semver {
+    major: number;
+    minor: number;
+    patch: number;
+    prerelease: string;
+}
+
+type VersionSpec =
+    | { pinned: false; exact: false }
+    | { pinned: true; exact: boolean; value: string };
+
+interface TagCandidate {
+    name: string;
+    version: Semver;
+}
+
+interface SourceInfo {
+    repo: string;
+    name: string;
+    url?: string;
+}
+
+interface Plan {
+    name: string;
+    config: Record<string, unknown>;
+    url: string;
+    local: boolean;
+    entry?: ResolvedEntry;
+}
+
+interface PluginSetup {
+    (config: Record<string, unknown>): void;
+    version?: string;
+}
+
+interface GlancePluginModule {
+    default: PluginSetup;
+    version?: string;
+}
+
+interface GlancePluginsRegistry {
+    __manager: true;
+    version: string;
+    getLock(): PluginLock;
+    refresh(): void;
+}
+
+interface Window {
+    GlancePlugins?: GlancePluginsRegistry;
+}
+
 (function () {
     "use strict";
 
@@ -24,7 +134,7 @@
         return;
     }
 
-    const script = document.currentScript;
+    const script = document.currentScript as HTMLScriptElement | null;
     const base = script
         ? new URL(".", script.src)
         : new URL("./", document.baseURI);
@@ -36,7 +146,7 @@
     const branchTtl = 24 * 60 * 60 * 1000;
     const pollMs = 10 * 1000;
 
-    const registry = {
+    const registry: GlancePluginsRegistry = {
         __manager: true,
         version: "3.0.0",
 
@@ -57,11 +167,11 @@
 
     window.GlancePlugins = registry;
 
-    function emptyLock() {
+    function emptyLock(): PluginLock {
         return { version: 1, updatedAt: 0, repos: {}, plugins: {} };
     }
 
-    function readLock() {
+    function readLock(): PluginLock {
         try {
             const parsed = JSON.parse(localStorage.getItem(lockKey));
 
@@ -77,7 +187,7 @@
         return emptyLock();
     }
 
-    function writeLock(lock) {
+    function writeLock(lock: PluginLock): void {
         try {
             localStorage.setItem(lockKey, JSON.stringify(lock));
         } catch {
@@ -85,8 +195,8 @@
         }
     }
 
-    async function fetchJSON(url, options) {
-        let lastError = null;
+    async function fetchJSON<T = unknown>(url: string, options?: RequestInit): Promise<T> {
+        let lastError: unknown = null;
 
         for (let attempt = 0; attempt < 2; attempt++) {
             try {
@@ -96,12 +206,12 @@
                     throw new Error(`${url}: ${res.status} ${res.statusText}`);
                 }
 
-                return await res.json();
+                return (await res.json()) as T;
             } catch (error) {
                 lastError = error;
 
                 if (error instanceof TypeError && attempt === 0) {
-                    await new Promise((resolve) => setTimeout(resolve, 500));
+                    await new Promise<void>((resolve) => setTimeout(resolve, 500));
                     continue;
                 }
 
@@ -112,7 +222,7 @@
         throw lastError;
     }
 
-    function repoParts(repo) {
+    function repoParts(repo: string): string[] {
         const parts = String(repo || "").split("/");
 
         if (
@@ -130,7 +240,7 @@
         return parts;
     }
 
-    async function defaultBranch(repo, lock) {
+    async function defaultBranch(repo: string, lock: PluginLock): Promise<string> {
         const cached = lock.repos[repo];
 
         if (cached && cached.branch && Date.now() - cached.branchAt < branchTtl) {
@@ -138,7 +248,7 @@
         }
 
         try {
-            const info = await fetchJSON(
+            const info = await fetchJSON<{ default_branch?: string }>(
                 `https://api.github.com/repos/${repo}`,
                 {
                     headers: { Accept: "application/vnd.github+json" },
@@ -161,7 +271,7 @@
         }
     }
 
-    async function latestCommit(repo, branch, lock) {
+    async function latestCommit(repo: string, branch: string, lock: PluginLock): Promise<string> {
         const cached = lock.repos[repo];
 
         if (
@@ -172,7 +282,7 @@
             return cached.latestCommit;
         }
 
-        const commit = await fetchJSON(
+        const commit = await fetchJSON<{ sha?: string }>(
             `https://api.github.com/repos/${repo}/commits/${encodeURIComponent(branch)}`,
             {
                 headers: { Accept: "application/vnd.github+json" },
@@ -193,7 +303,7 @@
         return commit.sha;
     }
 
-    async function tagVersions(repo, lock) {
+    async function tagVersions(repo: string, lock: PluginLock): Promise<string[]> {
         const cached = lock.repos[repo];
 
         if (cached && cached.tags && Date.now() - cached.tagsAt < tagsTtl) {
@@ -201,13 +311,13 @@
         }
 
         try {
-            const data = await fetchJSON(
+            const data = await fetchJSON<{ versions?: Array<{ version?: string }> }>(
                 `https://data.jsdelivr.com/v1/packages/gh/${repo}`
             );
 
             const versions = (data.versions || [])
                 .map((item) => item.version)
-                .filter((item) => typeof item === "string");
+                .filter((item): item is string => typeof item === "string");
 
             lock.repos[repo] = {
                 ...(cached || {}),
@@ -223,19 +333,25 @@
         }
     }
 
-    async function manifestAt(repo, ref) {
+    async function manifestAt(repo: string, ref: string): Promise<PluginManifest> {
         try {
-            return await fetchJSON(
+            return await fetchJSON<PluginManifest>(
                 `https://cdn.jsdelivr.net/gh/${repo}@${encodeURIComponent(ref)}/glance-plugins.json`
             );
         } catch {
-            return fetchJSON(
+            return fetchJSON<PluginManifest>(
                 `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(ref)}/glance-plugins.json`
             );
         }
     }
 
-    function parsePluginSource(spec) {
+    function asConfig(value: unknown): Record<string, unknown> {
+        return value && typeof value === "object" && !Array.isArray(value)
+            ? (value as Record<string, unknown>)
+            : {};
+    }
+
+    function parsePluginSource(spec: PluginSpec): SourceInfo {
         const raw = String(spec.plugin || "").trim();
 
         if (!raw) {
@@ -274,7 +390,7 @@
         };
     }
 
-    function versionSpec(raw) {
+    function versionSpec(raw: string | false | null | undefined): VersionSpec {
         if (raw === undefined || raw === null || raw === false) {
             return { pinned: false, exact: false };
         }
@@ -296,7 +412,7 @@
         throw new Error("version must be a semver range or false");
     }
 
-    function parseSemver(value) {
+    function parseSemver(value: unknown): Semver | null {
         const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(
             String(value).trim()
         );
@@ -313,7 +429,7 @@
         };
     }
 
-    function compareSemver(a, b) {
+    function compareSemver(a: Semver, b: Semver): number {
         if (a.major !== b.major) return a.major - b.major;
         if (a.minor !== b.minor) return a.minor - b.minor;
         if (a.patch !== b.patch) return a.patch - b.patch;
@@ -323,7 +439,7 @@
         return a.prerelease < b.prerelease ? -1 : 1;
     }
 
-    function upperCaret(version) {
+    function upperCaret(version: Semver): Semver {
         if (version.major > 0) {
             return { major: version.major + 1, minor: 0, patch: 0, prerelease: "" };
         }
@@ -333,7 +449,7 @@
         return { major: 0, minor: 0, patch: version.patch + 1, prerelease: "" };
     }
 
-    function upperTilde(version) {
+    function upperTilde(version: Semver): Semver {
         return {
             major: version.major,
             minor: version.minor + 1,
@@ -342,7 +458,7 @@
         };
     }
 
-    function satisfies(version, range) {
+    function satisfies(version: Semver, range: string): boolean {
         const value = String(range).trim();
 
         if (!value || value === "*") {
@@ -359,7 +475,7 @@
             .every((part) => satisfiesOne(version, part));
     }
 
-    function satisfiesOne(version, range) {
+    function satisfiesOne(version: Semver, range: string): boolean {
         if (range === "*") {
             return true;
         }
@@ -411,10 +527,10 @@
         }
     }
 
-    function selectTag(versions, plugin, range) {
+    function selectTag(versions: string[], plugin: string, range: string): TagCandidate {
         const prefix = `${plugin.toLowerCase()}-v`;
-        const prefixed = [];
-        const global = [];
+        const prefixed: TagCandidate[] = [];
+        const global: TagCandidate[] = [];
 
         for (const name of versions) {
             const lower = name.toLowerCase();
@@ -458,7 +574,7 @@
         return match;
     }
 
-    async function resolveRemote(name, spec, lock) {
+    async function resolveRemote(name: string, spec: PluginSpec, lock: PluginLock): Promise<ResolvedEntry> {
         const repo = String(spec.plugin || defaultRepo).trim();
         repoParts(repo);
 
@@ -479,13 +595,13 @@
                 (cached.kind === "tag" && requested.exact) ||
                 (cached.kind === "tag" && age < tagsTtl)
             ) {
-                return cached;
+                return cached as ResolvedEntry;
             }
         }
 
         try {
-            let ref;
-            let kind;
+            let ref: string;
+            let kind: "latest" | "tag";
             let tagVersion = "";
 
             if (requested.pinned) {
@@ -507,7 +623,7 @@
                 throw new Error(`Manifest has no plugin ${name} at ${ref}`);
             }
 
-            const entry = {
+            const entry: ResolvedEntry = {
                 requested: requestedKey,
                 version: info.version || tagVersion,
                 repo,
@@ -525,28 +641,28 @@
                     `[GlancePlugins] ${name}: using cached ${cached.ref}`,
                     error
                 );
-                return cached;
+                return cached as ResolvedEntry;
             }
 
             throw error;
         }
     }
 
-    function remotePluginUrl(entry) {
+    function remotePluginUrl(entry: ResolvedEntry): string {
         return `https://cdn.jsdelivr.net/gh/${entry.repo}@${encodeURIComponent(
             entry.ref
         )}/${entry.entry}`;
     }
 
-    const loadedStyles = new Set();
+    const loadedStyles = new Set<string>();
 
-    function loadStylesheet(url) {
+    function loadStylesheet(url: string): Promise<void> {
         if (loadedStyles.has(url)) {
             return Promise.resolve();
         }
 
         const existing = Array.from(
-            document.querySelectorAll('link[rel="stylesheet"]')
+            document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')
         ).find((link) => link.href === url);
 
         if (existing) {
@@ -554,7 +670,7 @@
             return Promise.resolve();
         }
 
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             const link = document.createElement("link");
             link.rel = "stylesheet";
             link.href = url;
@@ -567,9 +683,9 @@
         });
     }
 
-    const loadedModules = new Map();
+    const loadedModules = new Map<string, Promise<GlancePluginModule>>();
 
-    function importModule(url) {
+    function importModule(url: string): Promise<GlancePluginModule> {
         if (!loadedModules.has(url)) {
             loadedModules.set(url, import(url));
         }
@@ -577,7 +693,7 @@
         return loadedModules.get(url);
     }
 
-    function startConfigPoll(initialText) {
+    function startConfigPoll(initialText: string): void {
         let lastText = initialText;
 
         window.setInterval(async () => {
@@ -602,7 +718,7 @@
         }, pollMs);
     }
 
-    async function main() {
+    async function main(): Promise<void> {
         const configRes = await fetch(configUrl, { cache: "no-cache" });
 
         if (!configRes.ok) {
@@ -613,25 +729,25 @@
         }
 
         const configText = await configRes.text();
-        let config;
+        let config: PluginConfig;
 
         try {
-            config = JSON.parse(configText);
+            config = JSON.parse(configText) as PluginConfig;
         } catch (error) {
             console.error("[GlancePlugins] Invalid plugins.json:", error);
             return;
         }
 
-        const specs = Array.isArray(config.plugins) ? config.plugins : [];
+        const specs: PluginSpec[] = Array.isArray(config.plugins) ? config.plugins : [];
         const lock = readLock();
-        const plans = [];
+        const plans: Plan[] = [];
 
         for (const spec of specs) {
             if (!spec || spec.enabled === false) {
                 continue;
             }
 
-            let source;
+            let source: SourceInfo;
 
             try {
                 source = parsePluginSource(spec);
@@ -656,7 +772,7 @@
                 try {
                     plans.push({
                         name,
-                        config: spec.config || {},
+                        config: asConfig(spec.config),
                         url: new URL(source.url, base).href,
                         local: true,
                     });
@@ -674,7 +790,7 @@
                 );
                 plans.push({
                     name,
-                    config: spec.config || {},
+                    config: asConfig(spec.config),
                     url: remotePluginUrl(entry),
                     local: false,
                     entry,
@@ -733,7 +849,7 @@
                 }
 
                 if (
-                    plan.entry.version &&
+                    plan.entry && plan.entry.version &&
                     declared &&
                     plan.entry.version !== declared
                 ) {

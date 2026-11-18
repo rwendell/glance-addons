@@ -1,20 +1,20 @@
 # Standalone example: Glance + Kissa + Theme Switcher + Enhanced Search.
-# Copy theme-switcher.js and search-enhanced.js into ./assets/, and
-# kissa.css into ./assets/themes/kissa.css.
+# Copy dist/theme-switcher.js and dist/search-enhanced.js into ./assets/,
+# and kissa.css into ./assets/themes/kissa.css.
 #
-# With plugin-manager.js, remove custom-css-file and the direct script tags;
-# use plugins.jsonc instead:
-#   {"name": "theme-switcher", "config": {"colorscheme": "kissa"}}
+# With Plugin Manager, load plugins.json instead of the direct imports.
 
 server:
   assets-path: assets
 
 document:
   head: |
-    <script src="/assets/theme-switcher.js"
-      data-config='{"colorscheme":"kissa"}'></script>
-    <script src="/assets/search-enhanced.js" defer
-      data-config='{"directUrls":true,"suggestions":true,"maxSuggestions":8}'></script>
+    <script type="module">
+      import setupTheme from "/assets/theme-switcher.js";
+      import setupSearch from "/assets/search-enhanced.js";
+      setupTheme({ colorscheme: "kissa" });
+      setupSearch({ directUrls: true, suggestions: true, maxSuggestions: 8 });
+    </script>
 
 theme:
   disable-picker: true

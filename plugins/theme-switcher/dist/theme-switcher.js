@@ -1,4 +1,6 @@
-// plugins/theme-switcher/theme-switcher.ts
+// Generated from plugins/theme-switcher/src/theme-switcher.ts by build.mjs. Do not edit.
+
+// plugins/theme-switcher/src/theme-switcher.ts
 var version = "3.0.0";
 var NAME = "theme-switcher";
 var ATTRIBUTE = "data-glance-scheme";

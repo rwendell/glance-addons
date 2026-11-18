@@ -8,7 +8,6 @@ Plugins for [Glance](https://github.com/glanceapp/glance).
 | [Enhanced Search](plugins/search-enhanced/) | 2.0.0 | Opens URLs from the search bar and shows Google suggestions. |
 | [Theme Switcher](plugins/theme-switcher/) | 3.0.0 | Switches a colorscheme's light and dark palettes. Adds a light/dark/system control to the header. |
 
-
 Normal installs use [Plugin Manager](plugins/plugin-manager/).
 
 ## Loading plugins without Plugin Manager
@@ -27,4 +26,8 @@ document:
       setupSearch({ suggestions: true });
     </script>
 ```
+
+## Development
+
+TypeScript sources live in `plugins/<name>/src/`. The committed `dist/` files are the browser-ready builds. Rebuild with `aube run build` and type-check with `aube run check`.
 
