@@ -14,6 +14,7 @@ Plugins for [Glance](https://github.com/glanceapp/glance).
 Copy plugin files into `assets/` and load them directly:
 
 ```yaml
+#glance.yml
 document:
   head: |
     <link rel="stylesheet" href="/assets/themes/kissa.css">
