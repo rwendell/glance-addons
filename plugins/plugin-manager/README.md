@@ -7,13 +7,13 @@ Resolves and loads Glance plugins.
 Windows:
 
 ```bat
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v4.0.0/install/install.cmd | cmd
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/main/install/install.cmd | cmd
 ```
 
 Linux and macOS:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v4.0.0/install/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/main/install/install.sh | sh
 ```
 
 Add this to `glance.yml`:
@@ -70,3 +70,5 @@ This repository builds TypeScript plugins with `npm run build`.
 | `version` | Semver range or `false`. Defaults to `false`. |
 | `config` | Object passed to the plugin's `setup(config)`. |
 | `enabled` | Set to `false` to skip the plugin. |
+
+Version pins resolve against tags named `<plugin>-v<version>`, such as `search-enhanced-v2.0.0`. Installers use the `main` branch.
