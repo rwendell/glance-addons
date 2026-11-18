@@ -42,5 +42,3 @@ document:
 | Option | Required | Description |
 | ------ | -------- | ----------- |
 | `colorscheme` | yes | CSS file name in `assets/themes/`, without `.css`. |
-
-The toggle cycles System → Light → Dark → System and replaces Glance's theme picker. The plugin stores the mode in `localStorage` under `glance-theme-mode`.
