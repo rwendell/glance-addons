@@ -26,8 +26,3 @@ document:
       setupSearch({ suggestions: true });
     </script>
 ```
-
-## Development
-
-TypeScript sources live in `plugins/<name>/src/`. The committed `dist/` files are the browser-ready builds. Rebuild with `aube run build` and type-check with `aube run check`.
-
