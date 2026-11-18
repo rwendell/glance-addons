@@ -1,6 +1,6 @@
 # Enhanced Search for Glance
 
-Version 1.0.0. Opens URLs and adds Google suggestions to the Glance search widget.
+Opens URLs and adds Google suggestions to the Glance search widget.
 
 Bangs take priority. File-like tokens such as `main.py` search normally.
 

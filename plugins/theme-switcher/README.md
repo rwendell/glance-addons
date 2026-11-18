@@ -1,6 +1,6 @@
 # Theme Switcher for Glance
 
-Version 2.1.4. Switches a colorscheme's light and dark palettes and adds a light/dark/system toggle.
+Switches a colorscheme's light and dark palettes and adds a light/dark/system toggle.
 
 ## Install
 
@@ -41,4 +41,4 @@ document:
 | ------ | -------- | ----------- |
 | `colorscheme` | yes | CSS file name in `assets/themes/`, without `.css`. |
 
-The toggle cycles System → Light → Dark → System and replaces Glance's theme picker. The mode is stored in `localStorage` under `glance-theme-mode`.
+The toggle cycles System → Light → Dark → System and replaces Glance's theme picker. The plugin stores the mode in `localStorage` under `glance-theme-mode`.
