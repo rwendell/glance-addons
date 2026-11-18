@@ -1,0 +1,338 @@
+/*
+ * Glance Theme Switcher
+ *
+ * Applies a colorscheme's light/dark palette and provides a manual
+ * light/dark/system toggle in the header.
+ *
+ * Config:
+ *   { "colorscheme": "kissa" }
+ *
+ * Theme file requirement: it must define BOTH variants:
+ *
+ *   html[data-glance-scheme="dark"]  { ... }
+ *   html[data-glance-scheme="light"] { ... }
+ *
+ * A file that only defines one variant is reported as an error.
+ */
+export interface ThemeSwitcherConfig {
+    colorscheme: string;
+}
+
+export const version = "3.0.0";
+
+const NAME = "theme-switcher";
+    const ATTRIBUTE = "data-glance-scheme";
+    const STORAGE_KEY = "glance-theme-mode";
+    const MODES = ["system", "light", "dark"] as const;
+    type Mode = (typeof MODES)[number];
+    const LIGHT_SELECTOR = /data-glance-scheme\s*=\s*["']light["']/;
+    const DARK_SELECTOR = /data-glance-scheme\s*=\s*["']dark["']/;
+
+    const ICON_SYSTEM =
+        '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+        '<path d="M7.5,2C5.71,3.15 4.5,5.18 4.5,7.5C4.5,9.82 5.71,11.85 7.53,13C4.46,13 2,10.54 2,7.5A5.5,5.5 0 0,1 7.5,2M19.07,3.5L20.5,4.93L4.93,20.5L3.5,19.07L19.07,3.5M12.89,5.93L11.41,5L9.97,6L10.39,4.3L9,3.24L10.75,3.12L11.33,1.47L12,3.1L13.73,3.13L12.38,4.26L12.89,5.93M9.59,9.54L8.43,8.81L7.31,9.59L7.65,8.27L6.56,7.44L7.92,7.35L8.37,6.06L8.88,7.33L10.24,7.36L9.19,8.23L9.59,9.54M19,13.5A5.5,5.5 0 0,1 13.5,19C12.28,19 11.15,18.6 10.24,17.93L17.93,10.24C18.6,11.15 19,12.28 19,13.5M14.6,20.08L17.37,18.93L17.13,22.28L14.6,20.08M18.93,17.38L20.08,14.61L22.28,17.15L18.93,17.38M20.08,12.42L18.94,9.64L22.28,9.88L20.08,12.42M9.63,18.93L12.4,20.08L9.87,22.27L9.63,18.93Z"></path></svg>';
+    const ICON_LIGHT =
+        '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+        '<path d="M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z"></path></svg>';
+    const ICON_DARK =
+        '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+        '<path d="M17.75,4.09L15.22,6.03L16.13,9.09L13.5,7.28L10.87,9.09L11.78,6.03L9.25,4.09L12.44,4L13.5,1L14.56,4L17.75,4.09M21.25,11L19.61,12.25L20.2,14.23L18.5,13.06L16.8,14.23L17.39,12.25L15.75,11L17.81,10.95L18.5,9L19.19,10.95L21.25,11M18.97,15.95C19.8,15.87 20.69,17.05 20.16,17.8C19.84,18.25 19.5,18.67 19.08,19.07C15.17,23 8.84,23 4.94,19.07C1.03,15.17 1.03,8.83 4.94,4.93C5.34,4.53 5.76,4.17 6.21,3.85C6.96,3.32 8.14,4.21 8.06,5.04C7.79,7.9 8.75,10.87 10.95,13.06C13.14,15.26 16.1,16.22 18.97,15.95M17.33,17.97C14.5,17.81 11.7,16.64 9.53,14.5C7.36,12.31 6.2,9.5 6.04,6.68C3.23,9.82 3.34,14.64 6.35,17.66C9.37,20.67 14.19,20.78 17.33,17.97Z"></path></svg>';
+    const MODE_LABELS: Record<Mode, string> = {
+        system: "System",
+        light: "Light",
+        dark: "Dark",
+    };
+    const MODE_ICONS = {
+        system: ICON_SYSTEM,
+        light: ICON_LIGHT,
+        dark: ICON_DARK,
+    };
+
+    let initialized = false;
+
+    function findThemeStylesheet(colorscheme: string): CSSStyleSheet | undefined {
+        const suffix = `/themes/${colorscheme}.css`;
+
+        return Array.from(document.styleSheets).find((sheet) => {
+            const href = sheet.href || "";
+            return href.endsWith(suffix) || href.includes(suffix + "?");
+        });
+    }
+
+    function stylesheetHasBothVariants(sheet: CSSStyleSheet): boolean {
+        let light = false;
+        let dark = false;
+
+        function visit(rules: CSSRuleList): void {
+            for (const rule of rules) {
+                const text = rule.cssText || "";
+
+                if (!light && LIGHT_SELECTOR.test(text)) {
+                    light = true;
+                }
+
+                if (!dark && DARK_SELECTOR.test(text)) {
+                    dark = true;
+                }
+
+                const nested = (rule as CSSGroupingRule).cssRules;
+
+                if (nested) {
+                    visit(nested);
+                }
+            }
+        }
+
+        visit(sheet.cssRules);
+
+        return light && dark;
+    }
+
+    function validateTheme(colorscheme: string): void {
+        const sheet = findThemeStylesheet(colorscheme);
+
+        if (!sheet) {
+            console.warn(
+                `[${NAME}] Could not find themes/${colorscheme}.css. ` +
+                    "Load it with the plugin manager or a stylesheet."
+            );
+            return;
+        }
+
+        let valid = false;
+
+        try {
+            valid = stylesheetHasBothVariants(sheet);
+        } catch (error) {
+            console.warn(
+                `[${NAME}] Could not inspect themes/${colorscheme}.css`,
+                error
+            );
+            return;
+        }
+
+        if (!valid) {
+            console.error(
+                `[${NAME}] themes/${colorscheme}.css must define both ` +
+                    `html[${ATTRIBUTE}="light"] and html[${ATTRIBUTE}="dark"].`
+            );
+        }
+    }
+
+    function injectStyles(): void {
+        if (document.getElementById("gts-styles")) {
+            return;
+        }
+
+        const style = document.createElement("style");
+        style.id = "gts-styles";
+        style.textContent = `
+            html.gts-active .theme-picker,
+            html.gts-active .mobile-navigation .theme-choices {
+                display: none !important;
+            }
+
+            .header > .gts-toggle {
+                align-self: center;
+            }
+
+            .gts-toggle {
+                display: flex;
+                flex: none;
+                align-items: center;
+                justify-content: center;
+                width: 3.2rem;
+                height: 3.2rem;
+                margin-left: 1rem;
+                padding: 0;
+                border: 0;
+                border-radius: var(--border-radius);
+                background: var(--color-widget-background-highlight);
+                color: var(--color-text-highlight);
+                cursor: pointer;
+            }
+
+            .gts-toggle:hover {
+                color: var(--color-text-highlight);
+                background: var(--color-widget-background);
+            }
+
+            .gts-toggle svg {
+                width: 2rem;
+                height: 2rem;
+                fill: currentColor;
+                stroke: none;
+            }
+
+            .mobile-navigation .gts-toggle {
+                width: 3.2rem;
+                height: 3.2rem;
+                margin-left: 0.5rem;
+                background: transparent;
+                color: var(--color-text-base);
+            }
+
+            .mobile-navigation .gts-toggle:hover,
+            .mobile-navigation .gts-toggle:active {
+                background: var(--color-widget-background-highlight);
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    function setup(userConfig: ThemeSwitcherConfig): void {
+        if (initialized) {
+            return;
+        }
+
+        initialized = true;
+
+        const colorscheme =
+            typeof userConfig?.colorscheme === "string"
+                ? userConfig.colorscheme.trim()
+                : "";
+
+        if (!colorscheme) {
+            console.error(`[${NAME}] Missing required config: colorscheme`);
+            return;
+        }
+
+        if (!/^[a-z0-9][a-z0-9_-]*$/i.test(colorscheme)) {
+            console.error(`[${NAME}] Invalid colorscheme name: ${colorscheme}`);
+            return;
+        }
+
+        const root = document.documentElement;
+        const media = window.matchMedia("(prefers-color-scheme: light)");
+
+        function readMode(): Mode {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+
+                if (stored === "auto" || stored === "off") {
+                    return "system";
+                }
+
+                return MODES.includes(stored as Mode) ? (stored as Mode) : "system";
+            } catch {
+                return "system";
+            }
+        }
+
+        let mode: Mode = readMode();
+
+        root.dataset.glanceColorscheme = colorscheme;
+
+        function syncControls() {
+            const label = MODE_LABELS[mode];
+
+            for (const button of document.querySelectorAll<HTMLButtonElement>(".gts-toggle")) {
+                button.dataset.mode = mode;
+                button.innerHTML = MODE_ICONS[mode];
+                button.title = `Color scheme: ${label} (click to change)`;
+                button.setAttribute(
+                    "aria-label",
+                    `Color scheme: ${label}. Activate to change.`
+                );
+            }
+        }
+
+        function apply() {
+            const light =
+                mode === "light" || (mode === "system" && media.matches);
+
+            root.setAttribute(ATTRIBUTE, light ? "light" : "dark");
+            syncControls();
+        }
+
+        function setMode(nextMode: string): void {
+            if (!MODES.includes(nextMode as Mode)) {
+                return;
+            }
+
+            mode = nextMode as Mode;
+
+            try {
+                localStorage.setItem(STORAGE_KEY, mode);
+            } catch {
+                // localStorage can be unavailable in private browsing modes.
+            }
+
+            apply();
+        }
+
+        function nextMode() {
+            return MODES[(MODES.indexOf(mode) + 1) % MODES.length];
+        }
+
+        function createToggle() {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "gts-toggle";
+            button.addEventListener("click", () => setMode(nextMode()));
+            return button;
+        }
+
+        function mountControls() {
+            const header = document.querySelector(".header-container .header");
+
+            if (header && !header.querySelector(".gts-toggle")) {
+                header.appendChild(createToggle());
+            }
+
+            const mobileIcons = document.querySelector(
+                ".mobile-navigation-icons"
+            );
+
+            if (mobileIcons && !mobileIcons.querySelector(".gts-toggle")) {
+                mobileIcons.appendChild(createToggle());
+            }
+
+            syncControls();
+        }
+
+        function whenReady(callback) {
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", callback, {
+                    once: true,
+                });
+                return;
+            }
+
+            callback();
+        }
+
+        injectStyles();
+        root.classList.add("gts-active");
+        apply();
+        whenReady(mountControls);
+
+        media.addEventListener("change", () => {
+            if (mode === "system") {
+                apply();
+            }
+        });
+
+        requestAnimationFrame(() => validateTheme(colorscheme));
+
+        window.GlanceThemeSwitcher = {
+            colorscheme,
+            getMode: () => mode,
+            setMode,
+            refresh: apply,
+        };
+    }
+
+export default setup;
+
+declare global {
+    interface Window {
+        GlanceThemeSwitcher?: {
+            colorscheme: string;
+            getMode: () => string;
+            setMode: (mode: string) => void;
+            refresh: () => void;
+        };
+    }
+}

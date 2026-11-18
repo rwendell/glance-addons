@@ -31,8 +31,10 @@ Standalone:
 document:
   head: |
     <link rel="stylesheet" href="/assets/themes/kissa.css">
-    <script src="/assets/theme-switcher.js"
-      data-config='{"colorscheme":"kissa"}'></script>
+    <script type="module">
+      import setup from "/assets/theme-switcher.js";
+      setup({ colorscheme: "kissa" });
+    </script>
 ```
 
 ## Configuration

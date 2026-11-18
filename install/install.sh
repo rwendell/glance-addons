@@ -5,7 +5,7 @@
 set -eu
 
 ASSETS="${1:-${GLANCE_ASSETS:-assets}}"
-REF="${2:-${GLANCE_PLUGINS_REF:-v3.0.0}}"
+REF="${2:-${GLANCE_PLUGINS_REF:-v4.0.0}}"
 RAW="https://raw.githubusercontent.com/rwendell/glance-plugins/$REF"
 TARGET="$ASSETS/plugin-manager.js"
 
@@ -35,5 +35,5 @@ fi
 
 printf '\nPlugin manager installed to %s\n\n' "$TARGET"
 printf 'Add this to glance.yml:\n\n'
-printf 'document: { head: '<script src="/assets/plugin-manager.js"></script>' }'
+printf '%s\n' "document: { head: '<script src=\"/assets/plugin-manager.js\"></script>' }"
 printf '\nEdit %s/plugins.json to add plugins.\n' "$ASSETS"

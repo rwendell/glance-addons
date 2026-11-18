@@ -25,8 +25,10 @@ Standalone:
 ```yaml
 document:
   head: |
-    <script src="/assets/search-enhanced.js" defer
-      data-config='{"directUrls":true,"suggestions":true,"maxSuggestions":8}'></script>
+    <script type="module">
+      import setup from "/assets/search-enhanced.js";
+      setup({ directUrls: true, suggestions: true, maxSuggestions: 8 });
+    </script>
 ```
 
 ## Configuration

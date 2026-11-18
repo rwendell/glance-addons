@@ -7,13 +7,13 @@ Resolves and loads Glance plugins.
 Windows:
 
 ```bat
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v3.0.0/install/install.cmd | cmd
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v4.0.0/install/install.cmd | cmd
 ```
 
 Linux and macOS:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v3.0.0/install/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/v4.0.0/install/install.sh | sh
 ```
 
 Add this to `glance.yml`:
@@ -23,6 +23,22 @@ document: { head: '<script src="/assets/plugin-manager.js"></script>' }
 ```
 
 
+
+## Plugin API
+
+Plugins are ES modules:
+
+```js
+export default function setup(config) {
+    // plugin code
+}
+
+export const version = "1.0.0";
+```
+
+TypeScript and plain JavaScript both work. The manager imports the module and calls `setup(config)`.
+
+This repository builds TypeScript plugins with `npm run build`.
 
 ## Adding plugins
 
@@ -39,7 +55,7 @@ document: { head: '<script src="/assets/plugin-manager.js"></script>' }
     },
     {
       "plugin": "rwendell/glance-plugins:search-enhanced",
-      "version": "^1.0.0",
+      "version": false,
       "config": {
         "suggestions": true
       }

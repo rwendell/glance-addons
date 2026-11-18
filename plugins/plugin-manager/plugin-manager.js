@@ -38,26 +38,7 @@
 
     const registry = {
         __manager: true,
-        version: "2.0.0",
-        _loading: false,
-        _plugins: Object.create(null),
-
-        register(name, setup) {
-            if (typeof setup !== "function") {
-                throw new Error(`Plugin ${name} did not provide a setup function`);
-            }
-
-            this._plugins[name] = setup;
-        },
-
-        get(name) {
-            return this._plugins[name];
-        },
-
-        getVersion(name) {
-            const setup = this._plugins[name];
-            return setup && setup.version ? setup.version : null;
-        },
+        version: "3.0.0",
 
         getLock() {
             return readLock();
@@ -586,24 +567,14 @@
         });
     }
 
-    const loadedScripts = new Set();
+    const loadedModules = new Map();
 
-    function loadScript(url) {
-        if (loadedScripts.has(url)) {
-            return Promise.resolve();
+    function importModule(url) {
+        if (!loadedModules.has(url)) {
+            loadedModules.set(url, import(url));
         }
 
-        return new Promise((resolve, reject) => {
-            const script = document.createElement("script");
-            script.src = url;
-            script.async = true;
-            script.onload = () => {
-                loadedScripts.add(url);
-                resolve();
-            };
-            script.onerror = () => reject(new Error(`Failed to load ${url}`));
-            document.head.appendChild(script);
-        });
+        return loadedModules.get(url);
     }
 
     function startConfigPoll(initialText) {
@@ -733,56 +704,46 @@
             }
         }
 
-        registry._loading = true;
-
         for (const plan of plans) {
             try {
-                await loadScript(plan.url);
-            } catch (error) {
-                plan.failed = true;
-                console.error(`[GlancePlugins] Failed to load ${plan.name}:`, error);
-            }
-        }
+                const module = await importModule(plan.url);
+                const setup = module.default;
 
-        registry._loading = false;
+                if (typeof setup !== "function") {
+                    throw new Error("module has no default setup function");
+                }
 
-        for (const plan of plans) {
-            if (plan.failed) {
-                continue;
-            }
-
-            const setup = registry.get(plan.name);
-
-            if (typeof setup !== "function") {
-                console.error(`[GlancePlugins] ${plan.name} did not register`);
-                continue;
-            }
-
-            try {
                 setup(plan.config);
+
+                const declared =
+                    typeof module.version === "string"
+                        ? module.version
+                        : typeof setup.version === "string"
+                          ? setup.version
+                          : "";
+
+                if (plan.local) {
+                    lock.plugins[plan.name] = {
+                        local: true,
+                        path: new URL(plan.url).pathname,
+                        version: declared,
+                        resolvedAt: Date.now(),
+                    };
+                    continue;
+                }
+
+                if (
+                    plan.entry.version &&
+                    declared &&
+                    plan.entry.version !== declared
+                ) {
+                    console.warn(
+                        `[GlancePlugins] ${plan.name}: resolved ${plan.entry.version}, ` +
+                            `plugin reports ${declared}`
+                    );
+                }
             } catch (error) {
-                console.error(`[GlancePlugins] ${plan.name} setup failed:`, error);
-            }
-
-            if (plan.local) {
-                lock.plugins[plan.name] = {
-                    local: true,
-                    path: new URL(plan.url).pathname,
-                    version: setup.version || "",
-                    resolvedAt: Date.now(),
-                };
-                continue;
-            }
-
-            if (
-                plan.entry.version &&
-                setup.version &&
-                plan.entry.version !== setup.version
-            ) {
-                console.warn(
-                    `[GlancePlugins] ${plan.name}: resolved ${plan.entry.version}, ` +
-                        `plugin reports ${setup.version}`
-                );
+                console.error(`[GlancePlugins] Failed to load ${plan.name}:`, error);
             }
         }
 

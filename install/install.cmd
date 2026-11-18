@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 
 set "ASSETS=assets"
-set "REF=v3.0.0"
+set "REF=v4.0.0"
 if defined GLANCE_ASSETS set "ASSETS=%GLANCE_ASSETS%"
 if defined GLANCE_PLUGINS_REF set "REF=%GLANCE_PLUGINS_REF%"
 
