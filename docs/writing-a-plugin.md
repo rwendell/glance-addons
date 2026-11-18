@@ -14,8 +14,6 @@ export default function setup(config) {
 export const version = "1.0.0";
 ```
 
-TypeScript works too. Build it to JavaScript and commit the output in `dist/`.
-
 ## Loading
 
 Remote plugins need a `glance-plugins.json` at the repository root:
@@ -30,21 +28,3 @@ Remote plugins need a `glance-plugins.json` at the repository root:
   }
 }
 ```
-
-`entry` is the JavaScript file the manager loads.
-
-Point `assets/plugins.json` at the repository and plugin name:
-
-```json
-{
-  "plugins": [
-    {
-      "plugin": "owner/repo:my-plugin",
-      "version": false,
-      "config": {}
-    }
-  ]
-}
-```
-
-A local plugin can skip the manifest by setting `plugin` to the JavaScript file URL. Install [Plugin Manager](../plugins/plugin-manager/) first.
