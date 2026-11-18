@@ -37,9 +37,7 @@ echo Plugin manager installed to %TARGET%
 echo.
 echo Add this to glance.yml:
 echo.
-echo document:
-echo   head: ^|
-echo     ^<script src="/assets/plugin-manager.js"^>^</script^>
+echo document: { head: '<script src="/assets/plugin-manager.js"></script>' }
 echo.
 echo Edit %ASSETS%\plugins.json to add plugins.
 exit /b 0
