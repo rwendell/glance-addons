@@ -31,7 +31,7 @@ Add an entry to `assets/plugins.json`:
 }
 ```
 
-For a local copy, place [`search-enhanced.js`](search-enhanced.js) at `assets/plugins/search-enhanced/search-enhanced.js` and use `{ "name": "search-enhanced" }` without `plugin` or `version`.
+For a local copy, place [`search-enhanced.js`](search-enhanced.js) at `assets/plugins/search-enhanced/search-enhanced.js` and set `plugin` to `/assets/plugins/search-enhanced/search-enhanced.js` without `version`.
 
 See [Plugin Manager](../plugin-manager/README.md).
 

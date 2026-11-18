@@ -256,16 +256,35 @@
 
     function parsePluginSource(spec) {
         const raw = String(spec.plugin || "").trim();
-        const name = String(spec.name || "").trim();
 
         if (!raw) {
-            return { repo: "", name };
+            return { repo: "", name: "" };
+        }
+
+        if (
+            /^(?:https?:)?\/\//i.test(raw) ||
+            raw.startsWith("/") ||
+            raw.startsWith("./") ||
+            raw.startsWith("../") ||
+            /\.js$/i.test(raw)
+        ) {
+            let name = "";
+
+            try {
+                const url = new URL(raw, base);
+                const last = url.pathname.split("/").filter(Boolean).pop() || "";
+                name = last.replace(/\.js$/i, "");
+            } catch {
+                // The name check below reports an invalid source.
+            }
+
+            return { repo: "", name, url: raw };
         }
 
         const separator = raw.lastIndexOf(":");
 
         if (separator === -1) {
-            return { repo: raw, name };
+            return { repo: raw, name: "" };
         }
 
         return {
@@ -532,26 +551,6 @@
         }
     }
 
-    async function localPluginUrl(name, spec) {
-        if (spec.url) {
-            return new URL(spec.url, base).href;
-        }
-
-        const path = spec.path || `plugins/${name}/${name}.js`;
-        const url = new URL(path, base).href;
-
-        try {
-            const res = await fetch(url, { method: "HEAD", cache: "no-cache" });
-            if (res.ok) {
-                return url;
-            }
-        } catch {
-            // No local plugin.
-        }
-
-        return null;
-    }
-
     function remotePluginUrl(entry) {
         return `https://cdn.jsdelivr.net/gh/${entry.repo}@${encodeURIComponent(
             entry.ref
@@ -682,16 +681,17 @@
                 continue;
             }
 
-            const local = await localPluginUrl(name, spec);
-
-            if (local) {
-                plans.push({
-                    name,
-                    config: spec.config || {},
-                    spec,
-                    url: local,
-                    local: true,
-                });
+            if (source.url) {
+                try {
+                    plans.push({
+                        name,
+                        config: spec.config || {},
+                        url: new URL(source.url, base).href,
+                        local: true,
+                    });
+                } catch (error) {
+                    console.error(`[GlancePlugins] Invalid URL for ${name}:`, error);
+                }
                 continue;
             }
 
@@ -704,7 +704,6 @@
                 plans.push({
                     name,
                     config: spec.config || {},
-                    spec,
                     url: remotePluginUrl(entry),
                     local: false,
                     entry,
@@ -730,19 +729,6 @@
                         `[GlancePlugins] Could not load theme CSS for ${plan.name}`,
                         error
                     );
-                }
-            }
-
-            if (Array.isArray(plan.spec.styles)) {
-                for (const style of plan.spec.styles) {
-                    try {
-                        await loadStylesheet(new URL(style, base).href);
-                    } catch (error) {
-                        console.warn(
-                            `[GlancePlugins] Could not load style for ${plan.name}`,
-                            error
-                        );
-                    }
                 }
             }
         }

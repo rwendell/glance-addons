@@ -61,7 +61,7 @@ document:
     <script src="/assets/plugin-manager.js"></script>
 ```
 
-For a local copy, place [`theme-switcher.js`](theme-switcher.js) at `assets/plugins/theme-switcher/theme-switcher.js` and use `{ "name": "theme-switcher" }` without `plugin` or `version`.
+For a local copy, place [`theme-switcher.js`](theme-switcher.js) at `assets/plugins/theme-switcher/theme-switcher.js` and set `plugin` to `/assets/plugins/theme-switcher/theme-switcher.js` without `version`.
 
 The manager loads `themes/kissa.css`. `glance.yml` has no `theme.custom-css-file` entry.
 
