@@ -51,8 +51,6 @@ document: { head: '<script src="/assets/plugin-manager.js"></script>' }
 | Field | Description |
 | ----- | ----------- |
 | `plugin` | Remote plugin source as `owner/repo:plugin`. Can also be a URI/URL |
-| `name` | Local plugin name and folder name under `plugins/`. Omit for remote plugins. |
 | `version` | Semver range or `false`. Defaults to `false`. |
 | `config` | Object passed to the plugin's `setup(config)`. |
 | `enabled` | Set to `false` to skip the plugin. |
-| `styles` | Optional stylesheet URLs, relative to `assets/`. |
