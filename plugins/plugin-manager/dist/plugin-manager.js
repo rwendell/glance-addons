@@ -185,11 +185,11 @@
 			}
 		}
 		async function manifestAt(repo, ref) {
-			try {
-				return await fetchJSON(`https://cdn.jsdelivr.net/gh/${repo}@${encodeURIComponent(ref)}/${manifestPath}`);
-			} catch {
-				return fetchJSON(`https://raw.githubusercontent.com/${repo}/${encodeURIComponent(ref)}/${manifestPath}`);
-			}
+			const bases = [`https://cdn.jsdelivr.net/gh/${repo}@${encodeURIComponent(ref)}`, `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(ref)}`];
+			for (const base of bases) try {
+				return await fetchJSON(`${base}/${manifestPath}`);
+			} catch {}
+			return null;
 		}
 		function asConfig(value) {
 			return value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -384,7 +384,13 @@
 					ref = await latestCommit(repo, await defaultBranch(repo, lock), lock, ttl);
 					kind = "latest";
 				}
-				const info = (await manifestAt(repo, ref))[name];
+				const manifest = await manifestAt(repo, ref);
+				let info;
+				let entryDir = "";
+				if (manifest) {
+					info = manifest[name];
+					entryDir = manifestDir;
+				} else info = { entry: "index.js" };
 				if (!info || !info.entry) throw new Error(`Manifest has no plugin ${name} at ${ref}`);
 				const entry = {
 					requested: requestedKey,
@@ -392,6 +398,7 @@
 					repo,
 					ref,
 					entry: info.entry,
+					manifestDir: entryDir,
 					kind,
 					resolvedAt: Date.now()
 				};
@@ -406,7 +413,8 @@
 			}
 		}
 		function remotePluginUrl(entry) {
-			const base = `https://cdn.jsdelivr.net/gh/${entry.repo}@${encodeURIComponent(entry.ref)}/${manifestDir}`;
+			const dir = entry.manifestDir ?? manifestDir;
+			const base = `https://cdn.jsdelivr.net/gh/${entry.repo}@${encodeURIComponent(entry.ref)}/${dir}`;
 			return new URL(entry.entry, base).href;
 		}
 		const loadedStyles = /* @__PURE__ */ new Set();

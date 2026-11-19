@@ -17,7 +17,11 @@ export const version = "1.0.0";
 
 ## Loading
 
-Remote plugins need a `plugins/manifest.json` file:
+Remote plugin repositories use one of two layouts:
+
+- `plugins/manifest.json` for one or more plugins. Each top-level key is a
+  plugin name, and `entry` is relative to `plugins/`.
+- `index.js` at the repository root for a single plugin.
 
 ```json
 {
@@ -28,5 +32,5 @@ Remote plugins need a `plugins/manifest.json` file:
 }
 ```
 
-Each top-level key is the plugin name. `entry` is relative to the `plugins/`
-directory.
+For a single plugin, skip the manifest and provide `index.js` at the repo root.
+It still needs the default `setup` export shown above.

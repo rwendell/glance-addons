@@ -73,6 +73,7 @@ interface LockEntry {
     repo?: string;
     ref?: string;
     entry?: string;
+    manifestDir?: string;
     kind?: "latest" | "tag";
     resolvedAt?: number;
     local?: boolean;
@@ -492,20 +493,26 @@ declare const pageData: GlancePageData | undefined;
         }
     }
 
-    async function manifestAt(repo: string, ref: string): Promise<PluginManifest> {
-        try {
-            return await fetchJSON<PluginManifest>(
-                `https://cdn.jsdelivr.net/gh/${repo}@${encodeURIComponent(
-                    ref
-                )}/${manifestPath}`
-            );
-        } catch {
-            return fetchJSON<PluginManifest>(
-                `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(
-                    ref
-                )}/${manifestPath}`
-            );
+    async function manifestAt(
+        repo: string,
+        ref: string
+    ): Promise<PluginManifest | null> {
+        const bases = [
+            `https://cdn.jsdelivr.net/gh/${repo}@${encodeURIComponent(ref)}`,
+            `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(ref)}`,
+        ];
+
+        for (const base of bases) {
+            try {
+                return await fetchJSON<PluginManifest>(
+                    `${base}/${manifestPath}`
+                );
+            } catch {
+                // Try the next source.
+            }
         }
+
+        return null;
     }
 
     function asConfig(value: unknown): Record<string, unknown> {
@@ -809,7 +816,15 @@ declare const pageData: GlancePageData | undefined;
             }
 
             const manifest = await manifestAt(repo, ref);
-            const info = manifest[name];
+            let info: PluginInfo | undefined;
+            let entryDir = "";
+
+            if (manifest) {
+                info = manifest[name];
+                entryDir = manifestDir;
+            } else {
+                info = { entry: "index.js" };
+            }
 
             if (!info || !info.entry) {
                 throw new Error(`Manifest has no plugin ${name} at ${ref}`);
@@ -821,6 +836,7 @@ declare const pageData: GlancePageData | undefined;
                 repo,
                 ref,
                 entry: info.entry,
+                manifestDir: entryDir,
                 kind,
                 resolvedAt: Date.now(),
             };
@@ -841,9 +857,10 @@ declare const pageData: GlancePageData | undefined;
     }
 
     function remotePluginUrl(entry: ResolvedEntry): string {
+        const dir = entry.manifestDir ?? manifestDir;
         const base = `https://cdn.jsdelivr.net/gh/${entry.repo}@${encodeURIComponent(
             entry.ref
-        )}/${manifestDir}`;
+        )}/${dir}`;
 
         return new URL(entry.entry, base).href;
     }
