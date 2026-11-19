@@ -21,7 +21,9 @@ cp launch/glance.env.example ~/.config/glance/glance.env
 ```
 
 Edit `~/.config/glance/glance.env`, then adjust `ExecStart` in the unit if
-`glance` is not at `~/.local/bin/glance`.
+`glance` is not at `~/.local/bin/glance`. The unit creates
+`~/.local/share/glance/logs` and appends Glance’s output to
+`~/.local/share/glance/logs/glance.log`.
 
 ```sh
 systemctl --user daemon-reload
@@ -52,7 +54,7 @@ copy launch\start-glance.vbs "%USERPROFILE%\.config\glance\start-glance.vbs"
 Create a shortcut to that `.vbs` in your Startup folder. Open
 `shell:startup` with Win+R and place the shortcut there. The script starts
 Glance hidden, sets the env vars only for that process, and writes Glance’s
-output to `%USERPROFILE%\.config\glance\glance.log`.
+output to `%USERPROFILE%\.local\share\glance\logs\glance.log`.
 
 Adjust the `glance.exe` and `glance.yml` paths in the script if your layout
 differs from `%USERPROFILE%\.local\bin\glance.exe` and

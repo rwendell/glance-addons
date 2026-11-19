@@ -1,6 +1,14 @@
 Set shell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
+Sub EnsureFolder(path)
+    Dim parent
+    If fso.FolderExists(path) Then Exit Sub
+    parent = fso.GetParentFolderName(path)
+    If parent <> "" Then EnsureFolder parent
+    fso.CreateFolder path
+End Sub
+
 envFile = shell.ExpandEnvironmentStrings("%USERPROFILE%\.config\glance\glance.env")
 
 If fso.FileExists(envFile) Then
@@ -21,7 +29,9 @@ End If
 
 exe = shell.ExpandEnvironmentStrings("%USERPROFILE%\.local\bin\glance.exe")
 config = shell.ExpandEnvironmentStrings("%USERPROFILE%\.config\glance\glance.yml")
-logFile = shell.ExpandEnvironmentStrings("%USERPROFILE%\.config\glance\glance.log")
+logDir = shell.ExpandEnvironmentStrings("%USERPROFILE%\.local\share\glance\logs")
+logFile = logDir & "\glance.log"
+EnsureFolder logDir
 
 ' Glance runs hidden and writes its output to glance.log.
 shell.Run "cmd /c """"" & exe & """ --config """ & config & """ > """ & logFile & """ 2>&1""", 0, False

@@ -4,8 +4,9 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
+ExecStartPre=/usr/bin/mkdir -p %h/.local/share/glance/logs
 EnvironmentFile=%h/.config/glance/glance.env
-ExecStart=%h/.local/bin/glance --config %h/.config/glance/glance.yml
+ExecStart=/bin/sh -c 'exec "%h/.local/bin/glance" --config "%h/.config/glance/glance.yml" >> "%h/.local/share/glance/logs/glance.log" 2>&1'
 Restart=on-failure
 RestartSec=5
 
