@@ -159,7 +159,7 @@ export const version = "1.0.0";
 
 TypeScript and plain JavaScript both work. The manager imports the module and calls `setup(config)`.
 
-Plugin sources live in `src/`. The committed `dist/` files are the builds that Glance loads. Rebuild with `aube run build`.
+Plugin sources live in `src/`. The committed `dist/` files are the builds that Glance loads. Rebuild with `aube run build`, or use `aube run build:watch` while developing. The bundler config is `tsdown.config.ts`.
 
 ## Adding plugins
 
