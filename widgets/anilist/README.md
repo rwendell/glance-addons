@@ -15,13 +15,15 @@ Or copy the YAML from `widget.yml` directly into `glance.yml`.
 
 ## Configuration
 
-Change the `variables.user` value in the GraphQL request from `rwendell` to
-your AniList username:
+Set `ANILIST_USER` in the environment where Glance runs:
 
-```yaml
-variables:
-  user: rwendell
+```sh
+ANILIST_USER=your-name
 ```
+
+| Variable | Description |
+| -------- | ----------- |
+| `ANILIST_USER` | AniList username. |
 
 The widget uses the public AniList GraphQL API and does not require an API key.
 Data is cached for 30 minutes.

@@ -15,10 +15,16 @@ Or copy the YAML from `widget.yml` directly into `glance.yml`.
 
 ## Configuration
 
-Change `user_id` in the URL from `35772` to your Infinite Backlog user ID:
+Set both variables in the environment where Glance runs:
 
-```yaml
-url: https://infinitebacklog.net/api/user_collections?user_id=35772&status=playing&limit=5
+```sh
+INFINITE_BACKLOG_USER=your-name
+INFINITE_BACKLOG_USER_ID=12345
 ```
+
+| Variable | Description |
+| -------- | ----------- |
+| `INFINITE_BACKLOG_USER` | Infinite Backlog username, used for the title link. |
+| `INFINITE_BACKLOG_USER_ID` | Numeric user ID, used by the API. |
 
 Data is cached for 30 minutes.

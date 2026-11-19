@@ -1,8 +1,8 @@
 - type: custom-api
   cache: 30m
   title: Infinite Backlog — Playing
-  title-url: https://infinitebacklog.net/users/rwendell
-  url: https://infinitebacklog.net/api/user_collections?user_id=35772&status=playing&limit=5
+  title-url: https://infinitebacklog.net/users/${INFINITE_BACKLOG_USER}
+  url: https://infinitebacklog.net/api/user_collections?user_id=${INFINITE_BACKLOG_USER_ID}&status=playing&limit=5
   template: |
     <ul class="list list-gap-14">
       {{ range .JSON.Array "" }}

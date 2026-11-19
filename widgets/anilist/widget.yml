@@ -1,7 +1,7 @@
 - type: custom-api
   cache: 30m
   title: AniList — Watching & Reading
-  title-url: https://anilist.co/user/rwendell
+  title-url: https://anilist.co/user/${ANILIST_USER}
   url: https://graphql.anilist.co
   method: POST
   headers:
@@ -38,7 +38,7 @@
         }
       }
     variables:
-      user: rwendell
+      user: ${ANILIST_USER}
   template: |
     {{ define "anilist-entry" }}
     <li class="flex gap-10 items-start thumbnail-parent">

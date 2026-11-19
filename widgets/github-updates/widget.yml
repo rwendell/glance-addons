@@ -1,8 +1,8 @@
 - type: custom-api
   cache: 30m
   title: GitHub — Recently Updated
-  title-url: https://github.com/rwendell
-  url: https://api.github.com/users/rwendell/repos?sort=pushed&per_page=8
+  title-url: https://github.com/${GITHUB_USER}
+  url: https://api.github.com/users/${GITHUB_USER}/repos?sort=pushed&per_page=8
   headers:
     Accept: application/vnd.github+json
   template: |

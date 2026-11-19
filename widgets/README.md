@@ -29,6 +29,10 @@ example, from a page file under `pages/`, use `../widgets/anilist.yml`.
 The widgets use `custom-api`, so Glance fetches their data server-side. There is
 no client-side plugin and no plugin-manager involvement.
 
+Personal values such as usernames and IDs are environment variables. Set them in
+the environment where Glance runs; each widget README lists the variables it
+needs.
+
 ## Widgets
 
 | Widget | Description |
