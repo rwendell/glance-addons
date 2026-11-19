@@ -17,15 +17,17 @@ export const version = "1.0.0";
 
 ## Loading
 
-Remote plugins need a `glance-plugins.json` at the repository root:
+Remote plugins need a `plugins/manifest.json` file:
 
 ```json
 {
   "plugins": {
     "my-plugin": {
       "version": "1.0.0",
-      "entry": "dist/my-plugin.js"
+      "entry": "my-plugin/dist/my-plugin.js"
     }
   }
 }
 ```
+
+`entry` is relative to the `plugins/` directory.

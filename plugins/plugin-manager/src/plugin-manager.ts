@@ -243,10 +243,12 @@ declare const pageData: GlancePageData | undefined;
     const defaultCheckEvery = 6 * 60 * 60 * 1000;
     const retryTtl = 24 * 60 * 60 * 1000;
     const branchTtl = 24 * 60 * 60 * 1000;
+    const manifestPath = "plugins/manifest.json";
+    const manifestDir = "plugins/";
 
     const registry: GlancePluginsRegistry = {
         __manager: true,
-        version: "3.1.0",
+        version: "4.0.0",
 
         getLock() {
             return readLock();
@@ -495,11 +497,15 @@ declare const pageData: GlancePageData | undefined;
     async function manifestAt(repo: string, ref: string): Promise<PluginManifest> {
         try {
             return await fetchJSON<PluginManifest>(
-                `https://cdn.jsdelivr.net/gh/${repo}@${encodeURIComponent(ref)}/glance-plugins.json`
+                `https://cdn.jsdelivr.net/gh/${repo}@${encodeURIComponent(
+                    ref
+                )}/${manifestPath}`
             );
         } catch {
             return fetchJSON<PluginManifest>(
-                `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(ref)}/glance-plugins.json`
+                `https://raw.githubusercontent.com/${repo}/${encodeURIComponent(
+                    ref
+                )}/${manifestPath}`
             );
         }
     }
@@ -837,9 +843,11 @@ declare const pageData: GlancePageData | undefined;
     }
 
     function remotePluginUrl(entry: ResolvedEntry): string {
-        return `https://cdn.jsdelivr.net/gh/${entry.repo}@${encodeURIComponent(
+        const base = `https://cdn.jsdelivr.net/gh/${entry.repo}@${encodeURIComponent(
             entry.ref
-        )}/${entry.entry}`;
+        )}/${manifestDir}`;
+
+        return new URL(entry.entry, base).href;
     }
 
     const loadedStyles = new Set<string>();

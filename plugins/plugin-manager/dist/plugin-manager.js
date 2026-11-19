@@ -41,9 +41,11 @@
 		const defaultCheckEvery = 216e5;
 		const retryTtl = 864e5;
 		const branchTtl = 864e5;
+		const manifestPath = "plugins/manifest.json";
+		const manifestDir = "plugins/";
 		window.GlancePlugins = {
 			__manager: true,
-			version: "3.1.0",
+			version: "4.0.0",
 			getLock() {
 				return readLock();
 			},
@@ -184,9 +186,9 @@
 		}
 		async function manifestAt(repo, ref) {
 			try {
-				return await fetchJSON(`https://cdn.jsdelivr.net/gh/${repo}@${encodeURIComponent(ref)}/glance-plugins.json`);
+				return await fetchJSON(`https://cdn.jsdelivr.net/gh/${repo}@${encodeURIComponent(ref)}/${manifestPath}`);
 			} catch {
-				return fetchJSON(`https://raw.githubusercontent.com/${repo}/${encodeURIComponent(ref)}/glance-plugins.json`);
+				return fetchJSON(`https://raw.githubusercontent.com/${repo}/${encodeURIComponent(ref)}/${manifestPath}`);
 			}
 		}
 		function asConfig(value) {
@@ -405,7 +407,8 @@
 			}
 		}
 		function remotePluginUrl(entry) {
-			return `https://cdn.jsdelivr.net/gh/${entry.repo}@${encodeURIComponent(entry.ref)}/${entry.entry}`;
+			const base = `https://cdn.jsdelivr.net/gh/${entry.repo}@${encodeURIComponent(entry.ref)}/${manifestDir}`;
+			return new URL(entry.entry, base).href;
 		}
 		const loadedStyles = /* @__PURE__ */ new Set();
 		function loadStylesheet(url) {

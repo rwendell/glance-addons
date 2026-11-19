@@ -161,6 +161,10 @@ TypeScript and plain JavaScript both work. The manager imports the module and ca
 
 Plugin sources live in `src/`. The committed `dist/` files are the builds that Glance loads. Rebuild with `aube run build`, or use `aube run build:watch` while developing. The bundler config is `tsdown.config.ts`.
 
+Remote plugin repositories keep the manifest at `plugins/manifest.json`.
+`entry` paths in that manifest are relative to `plugins/`. The manifest moved
+here in 4.0.0; older managers read the old root path.
+
 ## Adding plugins
 
 | Field | Description |
