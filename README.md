@@ -40,6 +40,11 @@ curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-addons/main/ins
 
 See [Plugin Manager](plugins/plugin-manager/) for the generated `glance.yml`, manual setup, and `plugins.json`.
 
+## Launching Glance
+
+Optional systemd and Windows startup templates live in [`launch/`](launch/).
+They read widget profile values from `~/.config/glance/glance.env`.
+
 ## Loading plugins without Plugin Manager
 
 Plugins are ES modules. Copy them into your Glance assets directory (`~/.config/glance/assets/` by default) and load them directly:
