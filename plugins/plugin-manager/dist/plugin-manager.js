@@ -7,17 +7,66 @@
       return;
     }
     const script = document.currentScript;
-    const base = script ? new URL(".", script.src) : new URL("./", document.baseURI);
-    const configUrl = new URL("plugins.json", base);
+    const scriptBase = script ? new URL(".", script.src) : new URL("./", document.baseURI);
+    const remote = Boolean(
+      script && script.src && new URL(script.src).origin !== window.location.origin
+    );
+    const assetsBase = remote ? glanceAssetsBase() : scriptBase;
+    function glanceAssetsBase() {
+      let baseURL = "";
+      try {
+        if (typeof pageData !== "undefined" && pageData && typeof pageData.baseURL === "string") {
+          baseURL = pageData.baseURL;
+        }
+      } catch {
+      }
+      return directoryUrl(
+        `${baseURL.replace(/\/+$/, "")}/assets/`,
+        window.location.origin
+      );
+    }
+    function directoryUrl(value, base) {
+      const url = new URL(value, base);
+      if (!url.pathname.endsWith("/")) {
+        url.pathname += "/";
+      }
+      return url;
+    }
+    function readInlineConfig() {
+      const raw = script && script.dataset.config;
+      if (!raw) {
+        return null;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return { plugins: parsed };
+        }
+        if (parsed && typeof parsed === "object") {
+          return parsed;
+        }
+      } catch (error) {
+        console.error("[GlancePlugins] Invalid data-config JSON:", error);
+      }
+      return null;
+    }
+    const inlineConfig = readInlineConfig();
+    const configUrl = new URL(
+      script && script.dataset.configUrl || "plugins.json",
+      assetsBase
+    );
+    const themesBase = directoryUrl(
+      script && script.dataset.themes || "themes/",
+      assetsBase
+    );
     const lockKey = "glance-plugin-lock-v1";
     const defaultRepo = "rwendell/glance-plugins";
-    const latestTtl = 5 * 60 * 1e3;
-    const tagsTtl = 60 * 60 * 1e3;
+    const defaultCheckEvery = 6 * 60 * 60 * 1e3;
+    const retryTtl = 24 * 60 * 60 * 1e3;
     const branchTtl = 24 * 60 * 60 * 1e3;
-    const pollMs = 10 * 1e3;
     const registry = {
       __manager: true,
-      version: "3.0.0",
+      version: "3.1.0",
       getLock() {
         return readLock();
       },
@@ -51,15 +100,11 @@
       } catch {
       }
     }
-    async function fetchJSON(url, options) {
+    async function fetchResponse(url, options) {
       let lastError = null;
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const res = await fetch(url, options);
-          if (!res.ok) {
-            throw new Error(`${url}: ${res.status} ${res.statusText}`);
-          }
-          return await res.json();
+          return await fetch(url, options);
         } catch (error) {
           lastError = error;
           if (error instanceof TypeError && attempt === 0) {
@@ -70,6 +115,13 @@
         }
       }
       throw lastError;
+    }
+    async function fetchJSON(url, options) {
+      const res = await fetchResponse(url, options);
+      if (!res.ok) {
+        throw new Error(`${url}: ${res.status} ${res.statusText}`);
+      }
+      return await res.json();
     }
     function repoParts(repo) {
       const parts = String(repo || "").split("/");
@@ -105,31 +157,63 @@
         throw error;
       }
     }
-    async function latestCommit(repo, branch, lock) {
+    async function latestCommit(repo, branch, lock, ttl) {
       const cached = lock.repos[repo];
-      if (cached && cached.latestCommit && Date.now() - cached.latestAt < latestTtl) {
+      const now = Date.now();
+      if (cached && cached.latestCommit && now - (cached.latestAt || 0) < ttl) {
         return cached.latestCommit;
       }
-      const commit = await fetchJSON(
-        `https://api.github.com/repos/${repo}/commits/${encodeURIComponent(branch)}`,
-        {
-          headers: { Accept: "application/vnd.github+json" },
-          cache: "no-store"
-        }
-      );
+      if (cached && cached.latestCommit && cached.latestAttemptAt && now - cached.latestAttemptAt < retryTtl) {
+        return cached.latestCommit;
+      }
+      const url = `https://api.github.com/repos/${repo}/commits/${encodeURIComponent(
+        branch
+      )}`;
+      const headers = {
+        Accept: "application/vnd.github+json"
+      };
+      if (cached && cached.latestEtag) {
+        headers["If-None-Match"] = cached.latestEtag;
+      }
+      let res;
+      try {
+        res = await fetchResponse(url, { headers, cache: "no-store" });
+      } catch (error) {
+        lock.repos[repo] = {
+          ...cached || {},
+          latestAttemptAt: Date.now()
+        };
+        throw error;
+      }
+      if (res.status === 304 && cached && cached.latestCommit) {
+        lock.repos[repo] = {
+          ...cached || {},
+          latestAt: Date.now()
+        };
+        return cached.latestCommit;
+      }
+      if (!res.ok) {
+        lock.repos[repo] = {
+          ...cached || {},
+          latestAttemptAt: Date.now()
+        };
+        throw new Error(`${url}: ${res.status} ${res.statusText}`);
+      }
+      const commit = await res.json();
       if (!commit || !commit.sha) {
         throw new Error(`No commit returned for ${repo}@${branch}`);
       }
       lock.repos[repo] = {
         ...cached || {},
         latestCommit: commit.sha,
-        latestAt: Date.now()
+        latestAt: Date.now(),
+        latestEtag: res.headers.get("ETag") || void 0
       };
       return commit.sha;
     }
-    async function tagVersions(repo, lock) {
+    async function tagVersions(repo, lock, ttl) {
       const cached = lock.repos[repo];
-      if (cached && cached.tags && Date.now() - cached.tagsAt < tagsTtl) {
+      if (cached && cached.tags && Date.now() - (cached.tagsAt || 0) < ttl) {
         return cached.tags;
       }
       try {
@@ -172,7 +256,7 @@
       if (/^(?:https?:)?\/\//i.test(raw) || raw.startsWith("/") || raw.startsWith("./") || raw.startsWith("../") || /\.js$/i.test(raw)) {
         let name = "";
         try {
-          const url = new URL(raw, base);
+          const url = new URL(raw, assetsBase);
           const last = url.pathname.split("/").filter(Boolean).pop() || "";
           name = last.replace(/\.js$/i, "");
         } catch {
@@ -204,6 +288,28 @@
         };
       }
       throw new Error("version must be a semver range or false");
+    }
+    function checkEveryMs(name, raw) {
+      const value = String(raw || "").trim();
+      if (!value) {
+        return defaultCheckEvery;
+      }
+      const match = /^(\d+)\s*(s|m|h|d)$/i.exec(value);
+      if (!match) {
+        console.warn(
+          `[GlancePlugins] ${name}: invalid checkEvery "${value}"; using 6h`
+        );
+        return defaultCheckEvery;
+      }
+      const amount = Number(match[1]);
+      const unit = match[2].toLowerCase();
+      const multipliers = {
+        s: 1e3,
+        m: 60 * 1e3,
+        h: 60 * 60 * 1e3,
+        d: 24 * 60 * 60 * 1e3
+      };
+      return amount * multipliers[unit];
     }
     function parseSemver(value) {
       const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(
@@ -335,10 +441,11 @@
       repoParts(repo);
       const requested = versionSpec(spec.version);
       const requestedKey = requested.pinned ? requested.value : "false";
+      const ttl = checkEveryMs(name, spec.checkEvery);
       const cached = lock.plugins[name];
       if (cached && cached.repo === repo && cached.requested === requestedKey && cached.kind) {
         const age = Date.now() - (cached.resolvedAt || 0);
-        if (cached.kind === "latest" && age < latestTtl || cached.kind === "tag" && requested.exact || cached.kind === "tag" && age < tagsTtl) {
+        if (cached.kind === "latest" && age < ttl || cached.kind === "tag" && requested.exact || cached.kind === "tag" && age < ttl) {
           return cached;
         }
       }
@@ -347,14 +454,14 @@
         let kind;
         let tagVersion = "";
         if (requested.pinned) {
-          const versions = await tagVersions(repo, lock);
+          const versions = await tagVersions(repo, lock, ttl);
           const tag = selectTag(versions, name, requested.value);
           ref = tag.name;
           kind = "tag";
           tagVersion = `${tag.version.major}.${tag.version.minor}.${tag.version.patch}`;
         } else {
           const branch = await defaultBranch(repo, lock);
-          ref = await latestCommit(repo, branch, lock);
+          ref = await latestCommit(repo, branch, lock, ttl);
           kind = "latest";
         }
         const manifest = await manifestAt(repo, ref);
@@ -420,41 +527,29 @@
       }
       return loadedModules.get(url);
     }
-    function startConfigPoll(initialText) {
-      let lastText = initialText;
-      window.setInterval(async () => {
-        if (document.hidden) {
+    async function main() {
+      let config;
+      if (inlineConfig) {
+        config = inlineConfig;
+      } else {
+        const configRes = await fetch(configUrl, { cache: "no-cache" });
+        if (!configRes.ok) {
+          console.warn(
+            `[GlancePlugins] Could not load ${configUrl.pathname}: ${configRes.status}`
+          );
+          if (remote) {
+            console.warn(
+              "[GlancePlugins] Add data-config or data-config-url to the manager script tag."
+            );
+          }
           return;
         }
         try {
-          const res = await fetch(configUrl, { cache: "no-cache" });
-          if (!res.ok) {
-            return;
-          }
-          const text = await res.text();
-          if (text !== lastText) {
-            lastText = text;
-            window.location.reload();
-          }
-        } catch {
+          config = await configRes.json();
+        } catch (error) {
+          console.error("[GlancePlugins] Invalid plugins.json:", error);
+          return;
         }
-      }, pollMs);
-    }
-    async function main() {
-      const configRes = await fetch(configUrl, { cache: "no-cache" });
-      if (!configRes.ok) {
-        console.warn(
-          `[GlancePlugins] Could not load ${configUrl.pathname}: ${configRes.status}`
-        );
-        return;
-      }
-      const configText = await configRes.text();
-      let config;
-      try {
-        config = JSON.parse(configText);
-      } catch (error) {
-        console.error("[GlancePlugins] Invalid plugins.json:", error);
-        return;
       }
       const specs = Array.isArray(config.plugins) ? config.plugins : [];
       const lock = readLock();
@@ -484,7 +579,7 @@
             plans.push({
               name,
               config: asConfig(spec.config),
-              url: new URL(source.url, base).href,
+              url: new URL(source.url, assetsBase).href,
               local: true
             });
           } catch (error) {
@@ -514,7 +609,7 @@
         if (typeof colorscheme === "string" && /^[a-z0-9][a-z0-9_-]*$/i.test(colorscheme)) {
           try {
             await loadStylesheet(
-              new URL(`themes/${colorscheme}.css`, base).href
+              new URL(`${colorscheme}.css`, themesBase).href
             );
           } catch (error) {
             console.warn(
@@ -553,7 +648,6 @@
       }
       lock.updatedAt = Date.now();
       writeLock(lock);
-      startConfigPoll(configText);
     }
     main().catch((error) => {
       console.error("[GlancePlugins] Manager failed:", error);

@@ -8,7 +8,8 @@ export default function setup(config) {
 }
 ```
 
-`config` is the plugin's entry in `~/.config/glance/plugins.json`. Exporting a version is optional:
+`config` is the plugin's entry in `~/.config/glance/plugins.json` or in the
+manager's `data-config` attribute. Exporting a version is optional:
 
 ```js
 export const version = "1.0.0";

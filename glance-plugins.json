@@ -1,7 +1,7 @@
 {
   "plugins": {
     "plugin-manager": {
-      "version": "3.0.0",
+      "version": "3.1.0",
       "entry": "plugins/plugin-manager/dist/plugin-manager.js",
       "description": "Loads and configures Glance plugins."
     },
