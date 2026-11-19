@@ -1,0 +1,24 @@
+- type: custom-api
+  cache: 30m
+  title: Infinite Backlog — Playing
+  title-url: https://infinitebacklog.net/users/rwendell
+  url: https://infinitebacklog.net/api/user_collections?user_id=35772&status=playing&limit=5
+  template: |
+    <ul class="list list-gap-14">
+      {{ range .JSON.Array "" }}
+        <li class="flex gap-10 items-start thumbnail-parent">
+          {{ if ne (.String "game.cover.url") "" }}
+            <div class="thumbnail-container shrink-0" style="width: 2.75rem; height: 4rem;">
+              <img class="thumbnail" src="https://images.igdb.com/igdb/image/upload/t_cover_small/{{ .String "game.cover.url" }}" alt="" loading="lazy">
+            </div>
+          {{ end }}
+          <div class="grow min-width-0">
+            <a class="size-title-dynamic color-highlight text-truncate-2-lines" href="https://infinitebacklog.net/games/{{ .String "game.slug" }}" target="_blank" rel="noreferrer">{{ .String "game.name" }}</a>
+            {{ $minutes := .Int "playtime" }}
+            <div class="size-h6 color-subdue">{{ if ge $minutes 60 }}{{ div ($minutes | toFloat) 60 | toInt | formatNumber }}h{{ else }}{{ $minutes }}m{{ end }}</div>
+          </div>
+        </li>
+      {{ else }}
+        <li class="size-h6 color-subdue">Nothing currently playing</li>
+      {{ end }}
+    </ul>

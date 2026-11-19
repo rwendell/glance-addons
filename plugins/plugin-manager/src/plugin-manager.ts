@@ -12,8 +12,8 @@
  *
  * Load it from a URL and inline the config:
  *   <script
- *     src="https://cdn.jsdelivr.net/gh/rwendell/glance-plugins@main/plugins/plugin-manager/dist/plugin-manager.js"
- *     data-config='{"plugins":[{"plugin":"rwendell/glance-plugins:theme-switcher","config":{"colorscheme":"kissa"}}]}'></script>
+ *     src="https://cdn.jsdelivr.net/gh/rwendell/glance-addons@main/plugins/plugin-manager/dist/plugin-manager.js"
+ *     data-config='{"plugins":[{"plugin":"rwendell/glance-addons:theme-switcher","config":{"colorscheme":"kissa"}}]}'></script>
  *
  * Attributes:
  *   data-config      Inline config JSON. Replaces plugins.json.
@@ -238,7 +238,7 @@ declare const pageData: GlancePageData | undefined;
         assetsBase
     );
     const lockKey = "glance-plugin-lock-v1";
-    const defaultRepo = "rwendell/glance-plugins";
+    const defaultRepo = "rwendell/glance-addons";
     const defaultCheckEvery = 6 * 60 * 60 * 1000;
     const retryTtl = 24 * 60 * 60 * 1000;
     const branchTtl = 24 * 60 * 60 * 1000;

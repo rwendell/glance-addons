@@ -1,0 +1,90 @@
+- type: custom-api
+  cache: 30m
+  title: AniList — Watching & Reading
+  title-url: https://anilist.co/user/rwendell
+  url: https://graphql.anilist.co
+  method: POST
+  headers:
+    Accept: application/json
+  body-type: json
+  body:
+    query: |
+      query ($user: String) {
+        anime: MediaListCollection(userName: $user, type: ANIME, status: CURRENT) {
+          lists {
+            entries {
+              progress
+              media {
+                coverImage { medium }
+                episodes
+                siteUrl
+                title { romaji english }
+              }
+            }
+          }
+        }
+        manga: MediaListCollection(userName: $user, type: MANGA, status: CURRENT) {
+          lists {
+            entries {
+              progress
+              media {
+                chapters
+                coverImage { medium }
+                siteUrl
+                title { romaji english }
+              }
+            }
+          }
+        }
+      }
+    variables:
+      user: rwendell
+  template: |
+    {{ define "anilist-entry" }}
+    <li class="flex gap-10 items-start thumbnail-parent">
+      {{ if ne (.String "media.coverImage.medium") "" }}
+      <div class="thumbnail-container shrink-0" style="width: 2.75rem; height: 4rem;">
+        <img class="thumbnail" src="{{ .String "media.coverImage.medium" }}" alt="" loading="lazy">
+      </div>
+      {{ end }}
+      <div class="grow min-width-0">
+        {{ $title := .String "media.title.english" }}
+        {{ if eq $title "" }}{{ $title = .String "media.title.romaji" }}{{ end }}
+        <a class="size-title-dynamic color-highlight text-truncate-2-lines" href="{{ .String "media.siteUrl" }}" target="_blank" rel="noreferrer">{{ $title }}</a>
+        {{ $total := .Int "media.episodes" }}
+        {{ if eq $total 0 }}{{ $total = .Int "media.chapters" }}{{ end }}
+        <div class="size-h6 color-subdue">{{ .Int "progress" }}{{ if gt $total 0 }} / {{ $total }}{{ end }}</div>
+      </div>
+    </li>
+    {{ end }}
+
+    <div>
+      <div>
+        <p class="size-h4 color-primary margin-bottom-10">Watching</p>
+        <ul class="list list-gap-10">
+          {{ range .JSON.Array "data.anime.lists" }}
+            {{ range .Array "entries" }}
+              {{ template "anilist-entry" . }}
+            {{ else }}
+              <li class="size-h6 color-subdue">Nothing currently watching</li>
+            {{ end }}
+          {{ else }}
+            <li class="size-h6 color-subdue">Nothing currently watching</li>
+          {{ end }}
+        </ul>
+      </div>
+      <div class="margin-top-15">
+        <p class="size-h4 color-primary margin-bottom-10">Reading</p>
+        <ul class="list list-gap-10">
+          {{ range .JSON.Array "data.manga.lists" }}
+            {{ range .Array "entries" }}
+              {{ template "anilist-entry" . }}
+            {{ else }}
+              <li class="size-h6 color-subdue">Nothing currently reading</li>
+            {{ end }}
+          {{ else }}
+            <li class="size-h6 color-subdue">Nothing currently reading</li>
+          {{ end }}
+        </ul>
+      </div>
+    </div>

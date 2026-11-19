@@ -1,6 +1,8 @@
-# Glance Plugins
+# Glance Addons
 
-Plugins for [Glance](https://github.com/glanceapp/glance).
+Plugins and widgets for [Glance](https://github.com/glanceapp/glance).
+
+## Plugins
 
 | Plugin | Version | Description |
 | ------ | ------- | ----------- |
@@ -8,18 +10,32 @@ Plugins for [Glance](https://github.com/glanceapp/glance).
 | [Enhanced Search](plugins/search-enhanced/) | 2.0.0 | Opens URLs from the search bar and shows Google suggestions. |
 | [Theme Switcher](plugins/theme-switcher/) | 3.0.0 | Switches a colorscheme's light and dark palettes. Adds a light/dark/system control to the header. |
 
+## Widgets
+
+Widgets are `custom-api` YAML files. Copy a `widget.yml` into your config and
+`$include` it, or paste the YAML into `glance.yml`. The plugin manager does not
+install widgets.
+
+| Widget | Description |
+| ------ | ----------- |
+| [AniList](widgets/anilist/) | Current anime and manga progress from AniList. |
+| [GitHub Updates](widgets/github-updates/) | Recently updated GitHub repositories. |
+| [Infinite Backlog](widgets/infinite-backlog/) | Games currently playing on Infinite Backlog. |
+
+See [widgets/](widgets/) for usage and layout.
+
 ## Install
 
 Linux and macOS:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/main/install/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-addons/main/install/install.sh | sh
 ```
 
 Windows:
 
 ```bat
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/main/install/install.cmd | cmd
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-addons/main/install/install.cmd | cmd
 ```
 
 See [Plugin Manager](plugins/plugin-manager/) for the generated `glance.yml`, manual setup, and `plugins.json`.

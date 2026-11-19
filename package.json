@@ -1,5 +1,5 @@
 {
-  "name": "glance-plugins",
+  "name": "glance-addons",
   "private": true,
   "type": "module",
   "scripts": {

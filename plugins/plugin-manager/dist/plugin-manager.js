@@ -37,7 +37,7 @@
 		const configUrl = new URL(script && script.dataset.configUrl || "plugins.json", assetsBase);
 		const themesBase = directoryUrl(script && script.dataset.themes || "themes/", assetsBase);
 		const lockKey = "glance-plugin-lock-v1";
-		const defaultRepo = "rwendell/glance-plugins";
+		const defaultRepo = "rwendell/glance-addons";
 		const defaultCheckEvery = 216e5;
 		const retryTtl = 864e5;
 		const branchTtl = 864e5;

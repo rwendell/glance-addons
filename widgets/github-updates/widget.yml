@@ -1,0 +1,24 @@
+- type: custom-api
+  cache: 30m
+  title: GitHub — Recently Updated
+  title-url: https://github.com/rwendell
+  url: https://api.github.com/users/rwendell/repos?sort=pushed&per_page=8
+  headers:
+    Accept: application/vnd.github+json
+  template: |
+    <ul class="list list-gap-14 collapsible-container" data-collapse-after="5">
+      {{ range .JSON.Array "" }}
+        <li>
+          <a class="size-title-dynamic color-highlight" href="{{ .String "html_url" }}" target="_blank" rel="noreferrer">{{ .String "name" }}</a>
+          <ul class="list-horizontal-text flex-nowrap">
+            {{ if ne (.String "language") "" }}
+              <li>{{ .String "language" }}</li>
+            {{ end }}
+            <li {{ .String "pushed_at" | parseTime "rfc3339" | toRelativeTime }}></li>
+          </ul>
+          {{ if ne (.String "description") "" }}
+            <p class="size-h6 color-subdue text-truncate-2-lines margin-top-5">{{ .String "description" }}</p>
+          {{ end }}
+        </li>
+      {{ end }}
+    </ul>

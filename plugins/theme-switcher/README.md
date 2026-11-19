@@ -17,7 +17,7 @@ Add this entry to the `plugins` array in `~/.config/glance/plugins.json`:
 
 ```json
 {
-  "plugin": "rwendell/glance-plugins:theme-switcher",
+  "plugin": "rwendell/glance-addons:theme-switcher",
   "version": false,
   "config": {
     "colorscheme": "kissa"

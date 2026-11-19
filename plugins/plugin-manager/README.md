@@ -7,13 +7,13 @@ Resolves and loads Glance plugins.
 Linux and macOS:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/main/install/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/rwendell/glance-addons/main/install/install.sh | sh
 ```
 
 Windows:
 
 ```bat
-curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/main/install/install.cmd | cmd
+curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-addons/main/install/install.cmd | cmd
 ```
 
 The installer sets up:
@@ -38,7 +38,7 @@ server:
 
 document:
   head: |
-    <script src="https://cdn.jsdelivr.net/gh/rwendell/glance-plugins@main/plugins/plugin-manager/dist/plugin-manager.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/rwendell/glance-addons@main/plugins/plugin-manager/dist/plugin-manager.js"></script>
 
 pages:
   - $include: pages/home.yml
@@ -90,7 +90,7 @@ Point the manager at jsDelivr and keep `plugins.json`:
 ```yaml
 document:
   head: |
-    <script src="https://cdn.jsdelivr.net/gh/rwendell/glance-plugins@main/plugins/plugin-manager/dist/plugin-manager.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/rwendell/glance-addons@main/plugins/plugin-manager/dist/plugin-manager.js"></script>
 ```
 
 The manager fetches `<base-url>/assets/plugins.json` and themes from
@@ -108,7 +108,7 @@ Pin a tag instead of `main` for a fixed version.
 {
   "plugins": [
     {
-      "plugin": "rwendell/glance-plugins:theme-switcher",
+      "plugin": "rwendell/glance-addons:theme-switcher",
       "version": false,
       "checkEvery": "6h",
       "config": {
@@ -126,10 +126,10 @@ and pass the same object through `data-config`:
 document:
   head: |
     <script
-      src="https://cdn.jsdelivr.net/gh/rwendell/glance-plugins@main/plugins/plugin-manager/dist/plugin-manager.js"
+      src="https://cdn.jsdelivr.net/gh/rwendell/glance-addons@main/plugins/plugin-manager/dist/plugin-manager.js"
       data-config='{"plugins":[
-        {"plugin":"rwendell/glance-plugins:theme-switcher","config":{"colorscheme":"kissa"}},
-        {"plugin":"rwendell/glance-plugins:search-enhanced","config":{"suggestions":true}}
+        {"plugin":"rwendell/glance-addons:theme-switcher","config":{"colorscheme":"kissa"}},
+        {"plugin":"rwendell/glance-addons:search-enhanced","config":{"suggestions":true}}
       ]}'></script>
 ```
 

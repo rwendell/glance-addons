@@ -15,7 +15,7 @@
  * With Plugin Manager:
  *
  *   {
- *     "plugin": "rwendell/glance-plugins:search-enhanced",
+ *     "plugin": "rwendell/glance-addons:search-enhanced",
  *     "version": false,
  *     "config": { "suggestions": true, "maxSuggestions": 8 }
  *   }

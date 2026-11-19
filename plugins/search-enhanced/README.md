@@ -10,7 +10,7 @@ Add this entry to the `plugins` array in `~/.config/glance/plugins.json`:
 
 ```json
 {
-  "plugin": "rwendell/glance-plugins:search-enhanced",
+  "plugin": "rwendell/glance-addons:search-enhanced",
   "version": false,
   "config": {
     "directUrls": true,
