@@ -21,4 +21,7 @@ End If
 
 exe = shell.ExpandEnvironmentStrings("%USERPROFILE%\.local\bin\glance.exe")
 config = shell.ExpandEnvironmentStrings("%USERPROFILE%\.config\glance\glance.yml")
-shell.Run """" & exe & """ --config """ & config & """", 0, False
+logFile = shell.ExpandEnvironmentStrings("%USERPROFILE%\.config\glance\glance.log")
+
+' Glance runs hidden and writes its output to glance.log.
+shell.Run "cmd /c """"" & exe & """ --config """ & config & """ > """ & logFile & """ 2>&1""", 0, False

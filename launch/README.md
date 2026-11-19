@@ -51,10 +51,9 @@ copy launch\start-glance.vbs "%USERPROFILE%\.config\glance\start-glance.vbs"
 
 Create a shortcut to that `.vbs` in your Startup folder. Open
 `shell:startup` with Win+R and place the shortcut there. The script starts
-Glance hidden and sets the env vars only for that process.
+Glance hidden, sets the env vars only for that process, and writes Glance’s
+output to `%USERPROFILE%\.config\glance\glance.log`.
 
-If you prefer a visible console, use `start-glance.cmd` the same way.
-
-Adjust the `glance.exe` and `glance.yml` paths in the Windows scripts if your
-layout differs from `%USERPROFILE%\.local\bin\glance.exe` and
+Adjust the `glance.exe` and `glance.yml` paths in the script if your layout
+differs from `%USERPROFILE%\.local\bin\glance.exe` and
 `%USERPROFILE%\.config\glance\glance.yml`.
