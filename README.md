@@ -22,23 +22,6 @@ Windows:
 curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-plugins/main/install/install.cmd | cmd
 ```
 
-The installer loads the manager from jsDelivr and creates a config scaffold under the Glance config directory (`~/.config/glance` by default):
-
-```text
-~/.config/glance/
-├── glance.yml              # entry point: server, document.head, page includes
-├── plugins.json            # edit this
-├── pages/
-│   └── home.yml            # page definitions
-└── assets/
-    ├── plugins.json -> ../plugins.json
-    └── themes/
-```
-
-If the config directory already exists and is not an installer-generated scaffold, it is moved to `<config-dir>.bak` (for example, `~/.config/glance.bak`) first and a fresh scaffold is created. `plugins.json`, `pages/`, and `assets/` are copied into the new directory. Move any page definitions still in the backup's `glance.yml` into `pages/`, and copy theme, branding, auth, and other settings into the new root file.
-
-The manager and plugins load from jsDelivr. Set `GLANCE_PLUGINS_LOCAL=1` (or pass `--local`) to download a local manager instead.
-
 See [Plugin Manager](plugins/plugin-manager/) for the generated `glance.yml`, manual setup, and `plugins.json`.
 
 ## Loading plugins without Plugin Manager
