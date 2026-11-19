@@ -21,13 +21,12 @@ Remote plugins need a `plugins/manifest.json` file:
 
 ```json
 {
-  "plugins": {
-    "my-plugin": {
-      "version": "1.0.0",
-      "entry": "my-plugin/dist/my-plugin.js"
-    }
+  "my-plugin": {
+    "version": "1.0.0",
+    "entry": "my-plugin/dist/my-plugin.js"
   }
 }
 ```
 
-`entry` is relative to the `plugins/` directory.
+Each top-level key is the plugin name. `entry` is relative to the `plugins/`
+directory.

@@ -384,8 +384,7 @@
 					ref = await latestCommit(repo, await defaultBranch(repo, lock), lock, ttl);
 					kind = "latest";
 				}
-				const manifest = await manifestAt(repo, ref);
-				const info = manifest.plugins && manifest.plugins[name];
+				const info = (await manifestAt(repo, ref))[name];
 				if (!info || !info.entry) throw new Error(`Manifest has no plugin ${name} at ${ref}`);
 				const entry = {
 					requested: requestedKey,

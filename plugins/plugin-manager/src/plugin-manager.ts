@@ -54,9 +54,7 @@ interface PluginInfo {
     description?: string;
 }
 
-interface PluginManifest {
-    plugins?: Record<string, PluginInfo | undefined>;
-}
+type PluginManifest = Record<string, PluginInfo | undefined>;
 
 interface RepoCache {
     branch?: string;
@@ -811,7 +809,7 @@ declare const pageData: GlancePageData | undefined;
             }
 
             const manifest = await manifestAt(repo, ref);
-            const info = manifest.plugins && manifest.plugins[name];
+            const info = manifest[name];
 
             if (!info || !info.entry) {
                 throw new Error(`Manifest has no plugin ${name} at ${ref}`);
