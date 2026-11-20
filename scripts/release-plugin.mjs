@@ -33,14 +33,26 @@ function escapeRegExp(value) {
 }
 
 function usage() {
-    console.log(`Usage: aube run release:plugin -- --plugin <name> [options]
+    console.log(`Usage:
+  aube run publish
+  aube run publish -- --dry-run
+  aube run publish -- --minor
+  aube run publish -- --plugin <name>
+  aube run release:plugin -- --plugin <name> [options]
+
+publish infers the plugin from changed src/dist files, bumps patch, and pushes.
+release:plugin leaves the push explicit.
 
 Options:
-  --plugin <name>            Plugin to release (see --list)
+  --plugin <name>            Override the inferred plugin
   --list                     List plugins and current versions
-  --bump patch|minor|major   Version bump. Default: patch
+  --patch                    Patch bump (default)
+  --minor                    Minor bump
+  --major                    Major bump
+  --bump patch|minor|major   Explicit bump
   --version x.y.z            Explicit version
   --push                     Push main and the new tag
+  --no-push                  Do not push
   --dry-run                  Print the plan without changing anything
   -m, --message <text>       Custom commit message
   -h, --help                 Show this help
@@ -79,8 +91,20 @@ function parseArgs(argv) {
             case "--version":
                 options.version = argv[++index] || "";
                 break;
+            case "--patch":
+                options.bump = "patch";
+                break;
+            case "--minor":
+                options.bump = "minor";
+                break;
+            case "--major":
+                options.bump = "major";
+                break;
             case "--push":
                 options.push = true;
+                break;
+            case "--no-push":
+                options.push = false;
                 break;
             case "--dry-run":
                 options.dryRun = true;
@@ -130,6 +154,56 @@ function bumpVersion(version, kind) {
     }
 
     return `${major}.${minor}.${patch}`;
+}
+
+function inferPlugin() {
+    const status = capture("git", ["status", "--porcelain"]);
+    const sources = new Set();
+    const dists = new Set();
+
+    for (const line of status.split("\n")) {
+        if (!line.trim()) {
+            continue;
+        }
+
+        const file = line.slice(3).trim();
+        const match = /^plugins\/([^/]+)\/(src|dist)\//.exec(file);
+
+        if (!match) {
+            continue;
+        }
+
+        (match[2] === "src" ? sources : dists).add(match[1]);
+    }
+
+    if (sources.size === 1) {
+        return [...sources][0];
+    }
+
+    if (sources.size > 1) {
+        fail(
+            `multiple plugins have source changes: ${[...sources]
+                .sort()
+                .join(", ")}; pass --plugin <name>`,
+        );
+    }
+
+    if (dists.size === 1) {
+        return [...dists][0];
+    }
+
+    if (dists.size > 1) {
+        fail(
+            `multiple plugins have dist changes: ${[...dists]
+                .sort()
+                .join(", ")}; pass --plugin <name>`,
+        );
+    }
+
+    fail(
+        "no changed plugin src/dist files found; pass --plugin <name> " +
+            "or use --list",
+    );
 }
 
 function repoSlug() {
@@ -215,7 +289,7 @@ function main() {
     }
 
     if (!options.plugin) {
-        fail("--plugin is required; use --list to see available plugins");
+        options.plugin = inferPlugin();
     }
 
     if (!["patch", "minor", "major"].includes(options.bump)) {

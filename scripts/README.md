@@ -1,39 +1,50 @@
 # Scripts
 
-## Release a plugin
+## Publish a plugin
 
 ```sh
-# See available plugins and versions
-aube run release:plugin -- --list
+# Infer the changed plugin, bump patch, build, commit, tag, and push
+aube run publish
+```
 
-# Preview a patch release
-aube run release:plugin -- --plugin theme-switcher --bump patch --dry-run
+Preview first if you want:
 
-# Release and push
+```sh
+aube run publish -- --dry-run
+```
+
+`publish` infers the plugin from changed `plugins/<name>/src/` files. If no
+source changed, it falls back to changed `plugins/<name>/dist/` files. It fails
+if more than one plugin changed; pass `--plugin` in that case.
+
+```sh
+aube run publish -- --minor
+aube run publish -- --major
+aube run publish -- --plugin theme-switcher
+aube run publish -- --no-push
+aube run publish -- --version 3.1.0
+```
+
+The script updates the manifest, source version, and README row, runs
+`aube run check` and `aube run build`, commits only that plugin's files plus the
+manifest and README, creates `<plugin>-v<version>`, and pushes.
+
+The build is repo-wide. If it updates another plugin's stale `dist` file, the
+script warns and leaves that change uncommitted.
+
+## Explicit release
+
+`release:plugin` is the same script without the implicit push:
+
+```sh
 aube run release:plugin -- --plugin theme-switcher --bump patch --push
 ```
 
-The plugin manager has a convenience alias:
+`release:manager` is an alias for the manager:
 
 ```sh
 aube run release:manager -- --bump patch --push
 ```
-
-The release script:
-
-- reads the plugin's current version from `plugins/manifest.json`
-- updates the manifest version and the source version
-- updates the plugin's row in the root README
-- runs `aube run check` and `aube run build`
-- commits only that plugin's source and dist plus the manifest and README
-- creates `<plugin>-v<version>`
-- optionally pushes main and the tag
-
-Use `--version x.y.z` for an explicit version or `--bump minor|major`.
-Other working-tree changes are left alone.
-
-The build is repo-wide. If it updates another plugin's stale `dist` file, the
-script warns and leaves that change uncommitted.
 
 ## Pin the manager URL locally
 
@@ -44,10 +55,9 @@ aube run pin:manager -- --ref plugin-manager-v4.0.1
 ```
 
 It updates the Windows config and the chezmoi template when it finds them. Use
-`--windows-config`, `--chezmoi-source`, or `--file` to override.
-
-Use `--dry-run` to preview. It does not commit the dotfiles; it prints the
-commands to commit, push, and apply them.
+`--windows-config`, `--chezmoi-source`, or `--file` to override, and `--dry-run`
+to preview. It does not commit the dotfiles; it prints the commands to commit,
+push, and apply them.
 
 Other plugins do not need this step. The manager resolves them from the latest
 commit on its next `checkEvery` window; force it with `GlancePlugins.refresh()`.

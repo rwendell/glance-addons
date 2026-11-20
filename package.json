@@ -6,6 +6,7 @@
     "build": "tsdown",
     "build:watch": "tsdown --watch",
     "check": "tsc --noEmit",
+    "publish": "node scripts/release-plugin.mjs --push",
     "release:plugin": "node scripts/release-plugin.mjs",
     "release:manager": "node scripts/release-plugin.mjs --plugin plugin-manager",
     "pin:manager": "node scripts/pin-manager.mjs"
