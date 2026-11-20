@@ -1,0 +1,80 @@
+- type: custom-api
+  cache: 30m
+  title: Hardcover — Recent Activity
+  title-url: https://hardcover.app
+  url: https://api.hardcover.app/v1/graphql
+  method: POST
+  headers:
+    Accept: application/json
+    Authorization: Bearer ${HARDCOVER_TOKEN}
+  body-type: json
+  body:
+    query: |
+      query ($limit: Int!) {
+        me(limit: 1) {
+          activities(
+            where: { event: { _eq: "UserBookActivity" } }
+            order_by: { created_at: desc }
+            limit: $limit
+          ) {
+            id
+            created_at
+            likes_count
+            data
+            book {
+              title
+              slug
+              image { url }
+              contributions { author { name } }
+            }
+          }
+        }
+      }
+    variables:
+      limit: 8
+  template: |
+    {{ define "hardcover-activity" }}
+      {{ $rating := .String "data.userBook.rating" }}
+      {{ $review := .String "data.userBook.review" }}
+      {{ $statusID := .Int "data.userBook.statusId" }}
+      {{ $author := "" }}
+      {{ range .Array "book.contributions" }}
+        {{ if eq $author "" }}{{ $author = .String "author.name" }}{{ end }}
+      {{ end }}
+      {{ $cover := .String "book.image.url" }}
+      {{ if ne $cover "" }}
+        {{ if eq (findMatch "^https?://" $cover) "" }}{{ $cover = concat "https://" $cover }}{{ end }}
+      {{ end }}
+      <li class="flex gap-10 items-start thumbnail-parent">
+        {{ if ne $cover "" }}
+          <div class="thumbnail-container shrink-0" style="width: 2.75rem; height: 4rem;">
+            <img class="thumbnail" src="{{ $cover }}" alt="" loading="lazy">
+          </div>
+        {{ end }}
+        <div class="grow min-width-0">
+          <a class="size-title-dynamic color-highlight text-truncate-2-lines" href="https://hardcover.app/books/{{ .String "book.slug" }}" target="_blank" rel="noreferrer">{{ .String "book.title" }}</a>
+          <div class="size-h6 color-subdue">
+            {{ if ne $review "" }}Reviewed{{ if ne $rating "" }} · {{ $rating }}{{ end }}{{ else if ne $rating "" }}Rated {{ $rating }}{{ else if eq $statusID 1 }}Want to read{{ else if eq $statusID 2 }}Started reading{{ else if eq $statusID 3 }}Finished{{ else if eq $statusID 4 }}Paused{{ else if eq $statusID 5 }}Did not finish{{ else if eq $statusID 6 }}Ignored{{ else }}Updated{{ end }}{{ if ne $author "" }} · {{ $author }}{{ end }}
+          </div>
+          <div class="size-h6 color-subdue" {{ .String "created_at" | parseTime "rfc3339" | toRelativeTime }}></div>
+          {{ if ne $review "" }}
+            <p class="size-h6 color-subdue text-truncate-2-lines margin-top-5">{{ $review }}</p>
+          {{ end }}
+        </div>
+      </li>
+    {{ end }}
+
+    {{ range .JSON.Array "data.me" }}
+      {{ $activities := .Array "activities" }}
+      {{ if $activities }}
+        <ul class="list list-gap-14 collapsible-container" data-collapse-after="5">
+          {{ range $activities }}
+            {{ template "hardcover-activity" . }}
+          {{ end }}
+        </ul>
+      {{ else }}
+        <p class="size-h6 color-subdue">No recent activity</p>
+      {{ end }}
+    {{ else }}
+      <p class="size-h6 color-subdue">No recent activity</p>
+    {{ end }}

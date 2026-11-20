@@ -21,6 +21,7 @@ install widgets.
 | ------ | ----------- |
 | [AniList](widgets/anilist/) | Current anime and manga progress from AniList. |
 | [GitHub Updates](widgets/github-updates/) | Recently updated GitHub repositories. |
+| [Hardcover](widgets/hardcover/) | Recent reading activity from Hardcover. |
 | [Infinite Backlog](widgets/infinite-backlog/) | Games currently playing on Infinite Backlog. |
 
 See [widgets/](widgets/) for usage and layout.

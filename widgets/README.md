@@ -39,4 +39,5 @@ needs.
 | ------ | ----------- |
 | [AniList](anilist/) | Current anime and manga progress from AniList. |
 | [GitHub Updates](github-updates/) | Recently updated GitHub repositories. |
+| [Hardcover](hardcover/) | Recent reading activity from Hardcover. |
 | [Infinite Backlog](infinite-backlog/) | Games currently playing on Infinite Backlog. |
