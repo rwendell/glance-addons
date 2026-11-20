@@ -40,6 +40,11 @@ curl.exe -fsSL https://raw.githubusercontent.com/rwendell/glance-addons/main/ins
 
 See [Plugin Manager](plugins/plugin-manager/) for the generated `glance.yml`, manual setup, and `plugins.json`.
 
+## Development
+
+See [scripts/README.md](scripts/README.md) for releasing the plugin manager and
+pinning its URL locally.
+
 ## Launching Glance
 
 Optional systemd and Windows startup templates live in [`launch/`](launch/).

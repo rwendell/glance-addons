@@ -5,7 +5,9 @@
   "scripts": {
     "build": "tsdown",
     "build:watch": "tsdown --watch",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "release:manager": "node scripts/release-manager.mjs",
+    "pin:manager": "node scripts/pin-manager.mjs"
   },
   "devDependencies": {
     "tsdown": "^0.23.7",
