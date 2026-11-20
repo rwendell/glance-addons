@@ -1,51 +1,53 @@
 # Scripts
 
-## Release the plugin manager
+## Release a plugin
 
 ```sh
-# See what would happen
-aube run release:manager -- --bump patch --dry-run
+# See available plugins and versions
+aube run release:plugin -- --list
 
-# Commit, tag, and push a patch release
+# Preview a patch release
+aube run release:plugin -- --plugin theme-switcher --bump patch --dry-run
+
+# Release and push
+aube run release:plugin -- --plugin theme-switcher --bump patch --push
+```
+
+The plugin manager has a convenience alias:
+
+```sh
 aube run release:manager -- --bump patch --push
-
-# Or commit/tag locally and push later
-aube run release:manager -- --bump patch
 ```
 
 The release script:
 
-- bumps `plugins/manifest.json` and the manager registry version
-- updates the Plugin Manager row in the root README
+- reads the plugin's current version from `plugins/manifest.json`
+- updates the manifest version and the source version
+- updates the plugin's row in the root README
 - runs `aube run check` and `aube run build`
-- commits only the manager source, rebuilt dist, manifest, and README
-- creates `plugin-manager-v<version>`
-- optionally pushes `main` and the tag
+- commits only that plugin's source and dist plus the manifest and README
+- creates `<plugin>-v<version>`
+- optionally pushes main and the tag
 
-Other working-tree changes are left alone. Use `--version x.y.z` for an explicit
-version or `--bump minor|major`.
+Use `--version x.y.z` for an explicit version or `--bump minor|major`.
+Other working-tree changes are left alone.
 
-## Pin the new manager URL locally
+The build is repo-wide. If it updates another plugin's stale `dist` file, the
+script warns and leaves that change uncommitted.
 
-```sh
-aube run pin:manager -- --ref plugin-manager-v4.0.1 \
-  --windows-config /mnt/c/Users/Ryan/.config/glance/glance.yml \
-  --chezmoi-source ~/.local/share/chezmoi
-```
+## Pin the manager URL locally
 
-The pin script replaces the manager URL in the given config files. It can also
-detect the Windows config under WSL and the default chezmoi source.
-
-Use `--dry-run` to preview. It does not commit the dotfiles; it prints the
-commands to commit and apply them.
-
-Environment variables are also supported:
+The manager is loaded from a URL, so pin it to a tag or commit after a release:
 
 ```sh
-GLANCE_WINDOWS_CONFIG=/mnt/c/Users/Ryan/.config/glance/glance.yml \
-CHEZMOI_SOURCE=$HOME/.local/share/chezmoi \
 aube run pin:manager -- --ref plugin-manager-v4.0.1
 ```
 
-Use a tag or commit SHA rather than `@main` when you need the update
-immediately; `@main` is cached by jsDelivr and browsers.
+It updates the Windows config and the chezmoi template when it finds them. Use
+`--windows-config`, `--chezmoi-source`, or `--file` to override.
+
+Use `--dry-run` to preview. It does not commit the dotfiles; it prints the
+commands to commit, push, and apply them.
+
+Other plugins do not need this step. The manager resolves them from the latest
+commit on its next `checkEvery` window; force it with `GlancePlugins.refresh()`.
