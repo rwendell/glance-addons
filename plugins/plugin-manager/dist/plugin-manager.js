@@ -45,7 +45,7 @@
 		const manifestDir = "plugins/";
 		window.GlancePlugins = {
 			__manager: true,
-			version: "4.0.1",
+			version: "4.0.2",
 			getLock() {
 				return readLock();
 			},
@@ -123,14 +123,14 @@
 				throw error;
 			}
 		}
-		async function latestCommit(repo, branch, lock, ttl) {
+		async function latestCommit(repo, branch, lock, ttl, force = false) {
 			const cached = lock.repos[repo];
 			const now = Date.now();
-			if (cached && cached.latestCommit && now - (cached.latestAt || 0) < ttl) return cached.latestCommit;
-			if (cached && cached.latestCommit && cached.latestAttemptAt && now - cached.latestAttemptAt < retryTtl) return cached.latestCommit;
+			if (!force && cached && cached.latestCommit && now - (cached.latestAt || 0) < ttl) return cached.latestCommit;
+			if (!force && cached && cached.latestCommit && cached.latestAttemptAt && now - cached.latestAttemptAt < retryTtl) return cached.latestCommit;
 			const url = `https://api.github.com/repos/${repo}/commits/${encodeURIComponent(branch)}`;
 			const headers = { Accept: "application/vnd.github+json" };
-			if (cached && cached.latestEtag) headers["If-None-Match"] = cached.latestEtag;
+			if (!force && cached && cached.latestEtag) headers["If-None-Match"] = cached.latestEtag;
 			let res;
 			try {
 				res = await fetchResponse(url, {
@@ -375,22 +375,33 @@
 				let ref;
 				let kind;
 				let tagVersion = "";
+				let branch = "";
 				if (requested.pinned) {
 					const tag = selectTag(await tagVersions(repo, lock, ttl), name, requested.value);
 					ref = tag.name;
 					kind = "tag";
 					tagVersion = `${tag.version.major}.${tag.version.minor}.${tag.version.patch}`;
 				} else {
-					ref = await latestCommit(repo, await defaultBranch(repo, lock), lock, ttl);
+					branch = await defaultBranch(repo, lock);
+					ref = await latestCommit(repo, branch, lock, ttl);
 					kind = "latest";
 				}
-				const manifest = await manifestAt(repo, ref);
+				let manifest = await manifestAt(repo, ref);
 				let info;
 				let entryDir = "";
 				if (manifest) {
 					info = manifest[name];
 					entryDir = manifestDir;
 				} else info = { entry: "index.js" };
+				if ((!info || !info.entry) && kind === "latest") {
+					const freshRef = await latestCommit(repo, branch, lock, ttl, true);
+					if (freshRef !== ref) {
+						ref = freshRef;
+						manifest = await manifestAt(repo, ref);
+						info = manifest ? manifest[name] : void 0;
+						entryDir = manifest ? manifestDir : "";
+					}
+				}
 				if (!info || !info.entry) throw new Error(`Manifest has no plugin ${name} at ${ref}`);
 				const entry = {
 					requested: requestedKey,

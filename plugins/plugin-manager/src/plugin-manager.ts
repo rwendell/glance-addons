@@ -247,7 +247,7 @@ declare const pageData: GlancePageData | undefined;
 
 	const registry: GlancePluginsRegistry = {
 		__manager: true,
-		version: "4.0.1",
+		version: "4.0.2",
 
 		getLock() {
 			return readLock();
@@ -394,11 +394,13 @@ declare const pageData: GlancePageData | undefined;
 		branch: string,
 		lock: PluginLock,
 		ttl: number,
+		force = false,
 	): Promise<string> {
 		const cached = lock.repos[repo];
 		const now = Date.now();
 
 		if (
+			!force &&
 			cached &&
 			cached.latestCommit &&
 			now - (cached.latestAt || 0) < ttl
@@ -407,6 +409,7 @@ declare const pageData: GlancePageData | undefined;
 		}
 
 		if (
+			!force &&
 			cached &&
 			cached.latestCommit &&
 			cached.latestAttemptAt &&
@@ -422,7 +425,7 @@ declare const pageData: GlancePageData | undefined;
 			Accept: "application/vnd.github+json",
 		};
 
-		if (cached && cached.latestEtag) {
+		if (!force && cached && cached.latestEtag) {
 			headers["If-None-Match"] = cached.latestEtag;
 		}
 
@@ -836,6 +839,7 @@ declare const pageData: GlancePageData | undefined;
 			let ref: string;
 			let kind: "latest" | "tag";
 			let tagVersion = "";
+			let branch = "";
 
 			if (requested.pinned) {
 				const versions = await tagVersions(repo, lock, ttl);
@@ -844,12 +848,12 @@ declare const pageData: GlancePageData | undefined;
 				kind = "tag";
 				tagVersion = `${tag.version.major}.${tag.version.minor}.${tag.version.patch}`;
 			} else {
-				const branch = await defaultBranch(repo, lock);
+				branch = await defaultBranch(repo, lock);
 				ref = await latestCommit(repo, branch, lock, ttl);
 				kind = "latest";
 			}
 
-			const manifest = await manifestAt(repo, ref);
+			let manifest = await manifestAt(repo, ref);
 			let info: PluginInfo | undefined;
 			let entryDir = "";
 
@@ -858,6 +862,25 @@ declare const pageData: GlancePageData | undefined;
 				entryDir = manifestDir;
 			} else {
 				info = { entry: "index.js" };
+			}
+
+			// A plugin may have been added after the cached latest commit was
+			// resolved. Refetch the commit once before giving up.
+			if ((!info || !info.entry) && kind === "latest") {
+				const freshRef = await latestCommit(
+					repo,
+					branch,
+					lock,
+					ttl,
+					true,
+				);
+
+				if (freshRef !== ref) {
+					ref = freshRef;
+					manifest = await manifestAt(repo, ref);
+					info = manifest ? manifest[name] : undefined;
+					entryDir = manifest ? manifestDir : "";
+				}
 			}
 
 			if (!info || !info.entry) {
