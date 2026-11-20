@@ -45,7 +45,7 @@
 		const manifestDir = "plugins/";
 		window.GlancePlugins = {
 			__manager: true,
-			version: "4.0.0",
+			version: "4.0.1",
 			getLock() {
 				return readLock();
 			},
@@ -504,6 +504,7 @@
 						local: false,
 						entry
 					});
+					console.log(`[GlancePlugins] Loaded ${name}`);
 				} catch (error) {
 					console.error(`[GlancePlugins] Failed to resolve ${name}:`, error);
 				}
