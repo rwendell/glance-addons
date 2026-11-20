@@ -4,6 +4,11 @@
     "entry": "plugin-manager/dist/plugin-manager.js",
     "description": "Loads and configures Glance plugins."
   },
+  "same-tab": {
+    "version": "1.0.0",
+    "entry": "same-tab/dist/same-tab.js",
+    "description": "Opens links in the current tab by default."
+  },
   "search-enhanced": {
     "version": "2.0.0",
     "entry": "search-enhanced/dist/search-enhanced.js",
